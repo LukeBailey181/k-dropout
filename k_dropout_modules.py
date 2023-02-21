@@ -5,7 +5,6 @@ from torch import nn
 class StochasticKDropout(nn.Module):
     r'''
     Module for k-dropout, where each dropout mask is used for k consecutive steps.
-
     Arguments:
         k: number of steps to use the same mask.
         p: probability of an element to be zeroed. Default: 0.5
@@ -38,7 +37,6 @@ class PoolKDropout(nn.Module):
     and at each training step a mask is randomly selected from the pool. n_masks is
     simply a different way of parameterizing k, as setting n_masks = total_steps / k
     means each mask will be used on average k times.
-
     Arguments:
         n_masks: number of masks in the pool.
         p: probability of an element to be zeroed. Default: 0.5
@@ -65,7 +63,6 @@ class RRKDropout(nn.Linear):
     r'''
     Module for the round-robin variant of k-dropout where a pool of n_masks masks are
     generated then in training rotated and used for k consecutive steps each.
-
     Arguments:
         n_masks: number of masks in the pool.
         k: number of steps to use the same mask.

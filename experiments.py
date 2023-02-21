@@ -6,6 +6,7 @@ from helpers import train_net, test_net, get_mnist
 from networks import make_standard_net, make_skd_net
 
 
+
 def test_k_values_on_MNIST(k_vals, p=0.5):
 
     # Train standard net for baseline data
@@ -18,7 +19,9 @@ def test_k_values_on_MNIST(k_vals, p=0.5):
     dropout_accs = []
     for k in k_vals:
         train_loader, test_loader = get_mnist()
-        dropout_net = make_skd_net(num_classes=10, input_dim=784, drop_p=0.5, k=k)
+        dropout_net = StochasticKDropoutNet(
+            num_classes=10, input_dim=784, drop_p=0.5, k=k
+        )
         train_net(20, dropout_net, train_loader)
 
         _, acc = test_net(dropout_net, test_loader)
@@ -30,4 +33,4 @@ def test_k_values_on_MNIST(k_vals, p=0.5):
 
 if __name__ == "__main__":
 
-    test_k_values_on_MNIST(k_vals=[1,5,10,50, 100, 200, 300, 500, 800])
+    test_k_values_on_MNIST(k_vals=[1, 5, 10, 50, 100, 200, 300, 500, 800])

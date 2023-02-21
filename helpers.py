@@ -9,12 +9,11 @@ from networks import make_standard_net, make_skd_net
 
 
 if torch.cuda.is_available():
-    DEVICE = "cuda" 
+    DEVICE = "cuda"
 elif torch.backends.mps.is_available():
     DEVICE = "mps"
 else:
     DEVICE = "cpu"
-
 
 def test_net(net, dataset):
     """
@@ -27,8 +26,8 @@ def test_net(net, dataset):
     total_loss = total_correct = total_examples = 0
     with torch.no_grad():
         for data in dataset:
-            
-            X,y = data 
+
+            X, y = data
             X = X.to(DEVICE)
             y = y.to(DEVICE)
             output = net(X)
@@ -38,10 +37,10 @@ def test_net(net, dataset):
             total_examples += len(y)
 
     return total_loss, total_correct / total_examples
-            
+
 
 def train_net(epochs, net, trainset, lr=0.005, plot=False):
-    """"
+    """ "
     Trains inputted net using provided trainset.
     """
 
@@ -93,29 +92,37 @@ def get_mnist(train_batch_size=64, test_batch_size=1000):
     """
 
     train_loader = torch.utils.data.DataLoader(
-        torchvision.datasets.MNIST('./datasets/', train=True, download=True,
-                                    transform=torchvision.transforms.Compose([
-                                    torchvision.transforms.ToTensor(),
-                                    torchvision.transforms.Normalize(
-                                        (0.1307,), (0.3081,)
-                                    ),
-                                    torchvision.transforms.Lambda(lambda x: torch.flatten(x))
-                                ])),
-        batch_size=train_batch_size, 
+        torchvision.datasets.MNIST(
+            "./datasets/",
+            train=True,
+            download=True,
+            transform=torchvision.transforms.Compose(
+                [
+                    torchvision.transforms.ToTensor(),
+                    torchvision.transforms.Normalize((0.1307,), (0.3081,)),
+                    torchvision.transforms.Lambda(lambda x: torch.flatten(x)),
+                ]
+            ),
+        ),
+        batch_size=train_batch_size,
         shuffle=True,
         drop_last=True,
     )
 
     test_loader = torch.utils.data.DataLoader(
-        torchvision.datasets.MNIST('./datasets/', train=False, download=True,
-                                    transform=torchvision.transforms.Compose([
-                                    torchvision.transforms.ToTensor(),
-                                    torchvision.transforms.Normalize(
-                                        (0.1307,), (0.3081,)
-                                    ),
-                                    torchvision.transforms.Lambda(lambda x: torch.flatten(x))
-                                    ])),
-        batch_size=test_batch_size, 
+        torchvision.datasets.MNIST(
+            "./datasets/",
+            train=False,
+            download=True,
+            transform=torchvision.transforms.Compose(
+                [
+                    torchvision.transforms.ToTensor(),
+                    torchvision.transforms.Normalize((0.1307,), (0.3081,)),
+                    torchvision.transforms.Lambda(lambda x: torch.flatten(x)),
+                ]
+            ),
+        ),
+        batch_size=test_batch_size,
         shuffle=True,
         drop_last=True,
     )
