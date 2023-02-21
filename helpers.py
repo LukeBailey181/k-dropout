@@ -50,7 +50,7 @@ def test_net(net, dataset):
     return total_loss, total_correct / total_examples
             
 
-def train_net(epochs, net, trainset, lr=0.005):
+def train_net(epochs, net, trainset, lr=0.005, plot=False):
     """"
     Trains inputted net using provided trainset.
     """
@@ -80,15 +80,16 @@ def train_net(epochs, net, trainset, lr=0.005):
             epoch_loss += loss.item()
         epoch_losses.append(epoch_loss)
 
-    plt.plot([i for i in range(len(losses[10:]))], losses[10:])
-    plt.title("Training Loss")
-    plt.xlabel("Batch")
-    plt.show()
+    if plot:
+        plt.plot([i for i in range(len(losses[10:]))], losses[10:])
+        plt.title("Training Loss")
+        plt.xlabel("Batch")
+        plt.show()
 
-    plt.plot([i for i in range(len(epoch_losses))], epoch_losses)
-    plt.title("Training Loss")
-    plt.xlabel("Epoch")
-    plt.show()
+        plt.plot([i for i in range(len(epoch_losses))], epoch_losses)
+        plt.title("Training Loss")
+        plt.xlabel("Epoch")
+        plt.show()
 
 
 def get_mnist(train_batch_size=64, test_batch_size=1000):
@@ -111,7 +112,8 @@ def get_mnist(train_batch_size=64, test_batch_size=1000):
                                     torchvision.transforms.Lambda(lambda x: torch.flatten(x))
                                 ])),
         batch_size=train_batch_size, 
-        shuffle=True
+        shuffle=True,
+        drop_last=True,
     )
 
     test_loader = torch.utils.data.DataLoader(
@@ -124,7 +126,8 @@ def get_mnist(train_batch_size=64, test_batch_size=1000):
                                     torchvision.transforms.Lambda(lambda x: torch.flatten(x))
                                     ])),
         batch_size=test_batch_size, 
-        shuffle=True
+        shuffle=True,
+        drop_last=True,
     )
 
     return train_loader, test_loader
