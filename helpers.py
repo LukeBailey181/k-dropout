@@ -4,8 +4,12 @@ import torch.nn.functional as F
 import torchvision
 from matplotlib import pyplot as plt
 
-#DEVICE = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
-DEVICE = "mps"
+if torch.cuda.is_available():
+    DEVICE = "cuda" 
+elif torch.backends.mps.is_available():
+    DEVICE = "mps"
+else:
+    DEVICE = "cpu"
 
 class StandardNet(nn.Module):
     """ 
