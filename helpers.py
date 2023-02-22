@@ -1,8 +1,12 @@
+import time
 import torch
 from torch import nn
 import torch.nn.functional as F
 import torchvision
 from matplotlib import pyplot as plt
+
+from networks import make_standard_net, make_skd_net
+
 
 if torch.cuda.is_available():
     DEVICE = "cuda" 
@@ -11,24 +15,6 @@ elif torch.backends.mps.is_available():
 else:
     DEVICE = "cpu"
 
-class StandardNet(nn.Module):
-    """ 
-    Standard MLP implementation for testing
-    """
-
-    def __init__(self, num_classes=2, input_dim=2, hidden_units=100):
-        super(StandardNet, self).__init__()
-        self.fc1 = nn.Linear(input_dim, hidden_units)
-        self.fc2 = nn.Linear(hidden_units, hidden_units)  
-        self.fc3 = nn.Linear(hidden_units, hidden_units)  
-        self.fc4 = nn.Linear(hidden_units, num_classes)
-
-    def forward(self, x):
-        x = F.relu(self.fc1(x))
-        x = F.relu(self.fc2(x))
-        x = F.relu(self.fc3(x))
-        x = self.fc4(x)
-        return x
 
 def test_net(net, dataset):
     """
@@ -136,12 +122,20 @@ def get_mnist(train_batch_size=64, test_batch_size=1000):
 
     return train_loader, test_loader
 
+
 if __name__ == "__main__":
 
-    # Example usage
+    # Train standard net
     train_loader, test_loader = get_mnist()
-    net = StandardNet(num_classes=10, input_dim=784)
-    train_net(10, net, train_loader)
+    standard_net = make_standard_net(num_classes=10, input_dim=784)
+    train_net(10, standard_net, train_loader)
+    
+    # Train kdropout net
+    train_loader, test_loader = get_mnist()
+    dropout_net = make_skd_net(num_classes=10, input_dim=784, p=0.5, k=1)
+    train_net(10, dropout_net, train_loader)
 
-    _, acc = test_net(net, test_loader)
-    print(f"MNIST testing accuracy: {acc}")
+    _, standard_acc = test_net(standard_net, test_loader)
+    _, dropout_acc = test_net(dropout_net, test_loader)
+    print(f"Standard Net MNIST testing accuracy: {standard_acc}")
+    print(f"Dropout Net MNIST testing accuracy: {dropout_acc}")

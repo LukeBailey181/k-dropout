@@ -1,103 +1,94 @@
 import torch
 from torch import nn
-import torch.nn.functional as F
-from helpers import train_net, test_net, get_mnist, StandardNet
 
-class StochasticKDropout(nn.Linear):
-    def __init__(self, in_feats, out_feats, drop_p, k, bias=True):
-        super(StochasticKDropout, self).__init__(in_feats, out_feats, bias=bias)
 
-        self.p = drop_p
+class StochasticKDropout(nn.Module):
+    r'''
+    Module for k-dropout, where each dropout mask is used for k consecutive steps.
+
+    Arguments:
+        k: number of steps to use the same mask.
+        p: probability of an element to be zeroed. Default: 0.5
+    '''
+
+    def __init__(self, k, p=0.5):
+        super(StochasticKDropout, self).__init__()
         self.k = k
+        self.p = p
         self.uses = 0
-        self.binomial = torch.distributions.binomial.Binomial(probs=1-self.p)
-        self.mask = None
-
-    def forward(self, input):
-        
-        Z = F.linear(input, self.weight, self.bias)
-
-        if self.training: 
-
-            if self.uses % self.k == 0:
-                # Update mask 
-                self.mask = self.binomial.sample(Z.size()).to(self.weight.device)
-                self.uses = 0
-
-            self.uses += 1
-
-            # Dropout activations and scale the rest
-            return Z * self.mask * (1.0/(1-self.p))
-
-        return Z 
-
-
-class RRKDropout(nn.Linear):
-    def __init__(self, in_feats, out_feats, drop_p, k, num_masks, bias=True):
-        super(RRKDropout, self).__init__(in_feats, out_feats, bias=bias)
-
-        self.p = drop_p
-        self.k = k
-        self.uses = 0
-        self.mask_seeds = torch.randint(high=5000, size=(num_masks,))
-        self.mask_idx = -1
-        self.binomial = torch.distributions.binomial.Binomial(probs=1-self.p)
-        self.mask = None
-
-    def forward(self, input):
-        
-        Z = F.linear(input, self.weight, self.bias)
-
-        if self.training: 
-
-            if self.uses % self.k == 0:
-                # Update index
-                self.mask_idx += 1
-                self.mask_idx %= self.mask_seeds.shape[0]
-
-                # Get same mask as previous mask_idx by seeding RNG
-                torch.manual_seed(self.mask_seeds[self.mask_idx].item())
-                self.mask = self.binomial.sample(Z.size()).to(self.weight.device)
-                self.uses = 0
-
-            self.uses += 1
-
-            # Dropout activations and scale the rest
-            return Z * self.mask * (1.0/(1-self.p))
-
-        return Z 
-
-
-class StochasticKDropoutNet(nn.Module):
-
-    def __init__(self, num_classes=2, input_dim=2, hidden_units=100, drop_p=0.5, k=1):
-        super(StochasticKDropoutNet, self).__init__()
-        self.fc1 = StochasticKDropout(input_dim, hidden_units, drop_p, k)  
-        self.fc2 = StochasticKDropout(hidden_units, hidden_units, drop_p, k)  
-        self.fc3 = StochasticKDropout(hidden_units, hidden_units, drop_p, k)  
-        self.fc4 = nn.Linear(hidden_units, num_classes)
+        self.generator = torch.Generator()
+        self.seed = self.generator.initial_seed()
 
     def forward(self, x):
-        x = F.relu(self.fc1(x))
-        x = F.relu(self.fc2(x))
-        x = F.relu(self.fc3(x))
-        x = self.fc4(x)
+        if self.training:
+            if self.uses % self.k == 0:  # update mask seed every k steps
+                self.seed = self.generator.seed()
+            else:
+                self.generator.manual_seed(self.seed)
+            self.uses += 1
+
+            mask = (torch.rand(x.shape, generator=self.generator) > self.p).to(x.device)
+            return mask * x * (1.0/(1-self.p))  # mask and scale
         return x
 
 
-if __name__ == "__main__":
+class PoolKDropout(nn.Module):
+    r'''
+    Module for the pool variant of k-dropout where a pool of n_masks masks are generated
+    and at each training step a mask is randomly selected from the pool. n_masks is
+    simply a different way of parameterizing k, as setting n_masks = total_steps / k
+    means each mask will be used on average k times.
 
-    # Train standard net
-    train_loader, test_loader = get_mnist()
-    standard_net = StandardNet(num_classes=10, input_dim=784)
-    train_net(20, standard_net, train_loader)
-    
-    # Train kdropout net
-    train_loader, test_loader = get_mnist()
-    dropout_net = StochasticKDropoutNet(num_classes=10, input_dim=784, drop_p=0, k=10**10)
-    train_net(10, dropout_net, train_loader)
+    Arguments:
+        n_masks: number of masks in the pool.
+        p: probability of an element to be zeroed. Default: 0.5
+    '''
 
-    _, standard_acc = test_net(standard_net, test_loader)
-    _, dropout_acc = test_net(dropout_net, test_loader)
-    print(f"Standard Net MNIST testing accuracy: {standard_acc}")
-    print(f"Dropout Net MNIST testing accuracy: {dropout_acc}")
+    def __init__(self, n_masks, p=0.5):
+        super(PoolKDropout, self).__init__()
+        self.n_masks = n_masks
+        self.p = p
+        self.generator = torch.Generator()
+        self.mask_seeds = [self.generator.seed() for _ in range(n_masks)]
+
+    def forward(self, x):
+        if self.training:
+            seed_index = torch.randint(high=self.n_masks, size=(1,)).item()
+            self.generator.manual_seed(self.mask_seeds[seed_index])
+
+            mask = (torch.rand(x.shape, generator=self.generator) > self.p).to(x.device)
+            return mask * x * (1.0/(1-self.p))  # mask and scale
+        return x
+
+
+class RRKDropout(nn.Linear):
+    r'''
+    Module for the round-robin variant of k-dropout where a pool of n_masks masks are
+    generated then in training rotated and used for k consecutive steps each.
+
+    Arguments:
+        n_masks: number of masks in the pool.
+        k: number of steps to use the same mask.
+        p: probability of an element to be zeroed. Default: 0.5
+    '''
+
+    def __init__(self, n_masks, k, p=0.5):
+        super(RRKDropout, self).__init__()
+        self.n_masks = n_masks
+        self.k = k
+        self.p = p
+        self.uses = 0
+        self.generator = torch.Generator()
+        self.mask_seeds = [self.generator.seed() for _ in range(n_masks)]
+        self.mask_idx = -1
+
+    def forward(self, x):
+        if self.training: 
+            if self.uses % self.k == 0:  # rotate mask every k steps
+                self.mask_index = (self.mask_idx + 1) % self.n_masks
+            self.generator.manual_seed(self.mask_seeds[self.mask_index])
+            self.uses += 1
+
+            mask = (torch.rand(x.shape, generator=self.generator) > self.p).to(x.device)
+            return mask * x * (1.0/(1-self.p))  # mask and scale
+        return x
