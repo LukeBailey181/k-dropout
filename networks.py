@@ -5,6 +5,12 @@ from typing import Dict, Optional, Any
 from k_dropout_modules import StochasticKDropout
 
 
+def init_weights(m):
+    """He init weights"""
+    if isinstance(m, nn.Linear):
+        nn.init.kaiming_normal_(m.weight, nonlinearity="relu")
+
+
 def _make_net(
     input_dim: int,
     num_classes: int,
@@ -88,14 +94,14 @@ def make_standard_net(
 
 if __name__ == "__main__":
 
-    standard_net=make_standard_net()
+    standard_net = make_standard_net()
     print("STANDARD NET:")
     print(standard_net)
 
-    pt_dropout_net=make_pt_dropoout_net()
+    pt_dropout_net = make_pt_dropoout_net()
     print("PT DROPOUT NET:")
     print(pt_dropout_net)
 
-    skd_dropout_net=make_skd_net()
+    skd_dropout_net = make_skd_net()
     print("STOCHASTIC K DROPOUT NET:")
     print(skd_dropout_net)
