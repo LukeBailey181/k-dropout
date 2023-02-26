@@ -10,7 +10,7 @@ def _make_net(
     num_classes: int,
     hidden_units: int,
     hidden_layers: int,
-    dropout_layer: Optional[nn.Module] = None,
+    dropout_layer: Optional[Any] = None,
     dropout_kargs: Dict[str, Any] = {},
 ) -> nn.Module:
     """Helper function for making NNs"""
@@ -53,7 +53,7 @@ def make_pt_dropoout_net(
     )
 
 
-def make_skd_dropoout_net(
+def make_skd_net(
     input_dim: int = 784,
     num_classes: int = 10,
     hidden_units: int = 100,
@@ -96,6 +96,6 @@ if __name__ == "__main__":
     print("PT DROPOUT NET:")
     print(pt_dropout_net)
 
-    skd_dropout_net=make_skd_dropoout_net()
+    skd_dropout_net=make_skd_net()
     print("STOCHASTIC K DROPOUT NET:")
     print(skd_dropout_net)

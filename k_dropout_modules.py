@@ -59,7 +59,7 @@ class PoolKDropout(nn.Module):
         return x
 
 
-class RRKDropout(nn.Linear):
+class RRKDropout(nn.Module):
     r"""
     Module for the round-robin variant of k-dropout where a pool of n_masks masks are
     generated then in training rotated and used for k consecutive steps each.
