@@ -6,7 +6,6 @@ from helpers import train_net, test_net, get_mnist
 from networks import make_standard_net, make_skd_net
 
 
-
 def test_k_values_on_MNIST(k_vals, p=0.5):
 
     # Train standard net for baseline data

@@ -15,6 +15,7 @@ elif torch.backends.mps.is_available():
 else:
     DEVICE = "cpu"
 
+
 def test_net(net, dataset):
     """
     Evaulates inputted net on inputted dataset
@@ -136,7 +137,7 @@ if __name__ == "__main__":
     train_loader, test_loader = get_mnist()
     standard_net = make_standard_net(num_classes=10, input_dim=784)
     train_net(10, standard_net, train_loader)
-    
+
     # Train kdropout net
     train_loader, test_loader = get_mnist()
     dropout_net = make_skd_net(num_classes=10, input_dim=784, p=0.5, k=1)
