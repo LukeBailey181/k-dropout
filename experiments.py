@@ -30,7 +30,11 @@ def test_k_values_on_MNIST(k_vals, p=0.5):
 
 
 def find_performant_dropout_net(
-    hidden_layers=[2, 5], hidden_units=[100, 200, 500], p=0.5, repeats=5
+    hidden_layers=[2, 5],
+    hidden_units=[100, 200, 500],
+    p=0.5,
+    repeats=5,
+    data_wokers=0,
 ):
     """
     Trains multiple standard and pytorch dropout nets to find an
@@ -42,7 +46,7 @@ def find_performant_dropout_net(
     for num_hl in hidden_layers:
         for num_hu in hidden_units:
             for _ in range(repeats):
-                train_loader, test_loader = get_mnist()
+                train_loader, test_loader = get_mnist(num_workers=data_wokers)
 
                 # Train and test standard net
                 standard_net = make_standard_net(
@@ -51,7 +55,7 @@ def find_performant_dropout_net(
                     hidden_units=num_hu,
                     hidden_layers=num_hl,
                 )
-                train_net(20, standard_net, train_loader)
+                train_net(20, standard_net, train_loader, preproc=True)
                 _, standard_acc = test_net(standard_net, test_loader)
 
                 results[("standard", num_hl, num_hu)].append(standard_acc)
@@ -64,8 +68,8 @@ def find_performant_dropout_net(
                     hidden_layers=num_hl,
                     p=p,
                 )
-                train_net(20, dropout_net, train_loader)
-                _, dropout_acc = test_net(standard_net, test_loader)
+                train_net(20, dropout_net, train_loader, preproc=True)
+                _, dropout_acc = test_net(dropout_net, test_loader)
 
                 results[("dropout", num_hl, num_hu)].append(dropout_acc)
 
@@ -74,10 +78,8 @@ def find_performant_dropout_net(
 
 if __name__ == "__main__":
 
-    # TODO RETURN THIS BACK
     # test_k_values_on_MNIST(k_vals=[1,5,10,50, 100, 200, 300, 500, 800])
     # test_k_values_on_MNIST(k_vals=[1,5,10])
-
     find_performant_dropout_net(
-        hidden_layers=[2, 5], hidden_units=[100, 200, 500], p=0.5, repeats=5
+        hidden_layers=[2], hidden_units=[100], p=0.5, repeats=1, data_wokers=0
     )

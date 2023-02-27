@@ -40,10 +40,18 @@ def test_net(net, dataset):
     return total_loss, total_correct / total_examples
 
 
-def train_net(epochs, net, trainset, lr=0.005, plot=False):
+def train_net(epochs, net, trainset, lr=0.005, plot=False, preproc=False):
     """ "
     Trains inputted net using provided trainset.
     """
+    if preproc:
+        preproc_data = []
+        for batch in trainset:
+            X, y = batch
+            X = X.to(DEVICE)
+            y = y.to(DEVICE)
+            preproc_data.append([X, y])
+        trainset = preproc_data
 
     criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(net.parameters(), lr)
@@ -54,13 +62,17 @@ def train_net(epochs, net, trainset, lr=0.005, plot=False):
     net.train()
     net.to(DEVICE)
     for epoch in range(epochs):
+
         epoch_loss = 0
         if epoch % 1 == 0:
             print(f"Epoch {epoch}")
+
         for data in trainset:
             X, y = data
-            X = X.to(DEVICE)
-            y = y.to(DEVICE)
+            if not preproc:
+                X = X.to(DEVICE)
+                y = y.to(DEVICE)
+
             net.zero_grad()
             output = net(X)
             loss = criterion(output, y)
@@ -68,6 +80,7 @@ def train_net(epochs, net, trainset, lr=0.005, plot=False):
             optimizer.step()
             losses.append(loss.item())
             epoch_loss += loss.item()
+
         epoch_losses.append(epoch_loss)
 
     if plot:
@@ -82,7 +95,7 @@ def train_net(epochs, net, trainset, lr=0.005, plot=False):
         plt.show()
 
 
-def get_mnist(train_batch_size=64, test_batch_size=1000):
+def get_mnist(train_batch_size=64, test_batch_size=1000, num_workers=0):
     """
     Download MNIST into ./datasets/ directory and return dataloaders containing
     MNIST. If ./datasets/ directory doesn't exist then it is made.
@@ -108,6 +121,8 @@ def get_mnist(train_batch_size=64, test_batch_size=1000):
         batch_size=train_batch_size,
         shuffle=True,
         drop_last=True,
+        pin_memory=True,
+        num_workers=num_workers,
     )
 
     test_loader = torch.utils.data.DataLoader(
@@ -126,6 +141,8 @@ def get_mnist(train_batch_size=64, test_batch_size=1000):
         batch_size=test_batch_size,
         shuffle=True,
         drop_last=True,
+        pin_memory=True,
+        num_workers=num_workers,
     )
 
     return train_loader, test_loader
