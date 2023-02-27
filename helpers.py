@@ -94,6 +94,8 @@ def train_net(epochs, net, trainset, lr=0.005, plot=False, preproc=False):
         plt.xlabel("Epoch")
         plt.show()
 
+    return epoch_losses
+
 
 def get_mnist(train_batch_size=64, test_batch_size=1000, num_workers=0):
     """

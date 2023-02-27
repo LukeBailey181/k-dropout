@@ -35,6 +35,8 @@ def find_performant_dropout_net(
     p=0.5,
     repeats=5,
     data_wokers=0,
+    epochs=20,
+    batch_size=512,
 ):
     """
     Trains multiple standard and pytorch dropout nets to find an
@@ -42,11 +44,14 @@ def find_performant_dropout_net(
     networks
     """
 
+    model_losses = defaultdict(list)
     results = defaultdict(list)
     for num_hl in hidden_layers:
         for num_hu in hidden_units:
             for _ in range(repeats):
-                train_loader, test_loader = get_mnist(num_workers=data_wokers)
+                train_loader, test_loader = get_mnist(
+                    train_batch_size=batch_size, num_workers=data_wokers
+                )
 
                 # Train and test standard net
                 standard_net = make_standard_net(
@@ -55,10 +60,13 @@ def find_performant_dropout_net(
                     hidden_units=num_hu,
                     hidden_layers=num_hl,
                 )
-                train_net(20, standard_net, train_loader, preproc=True)
+                epoch_losses = train_net(
+                    epochs, standard_net, train_loader, preproc=True
+                )
                 _, standard_acc = test_net(standard_net, test_loader)
 
                 results[("standard", num_hl, num_hu)].append(standard_acc)
+                model_losses[("standard", num_hl, num_hu)].append(epoch_losses)
 
                 # Train and test dropout net
                 dropout_net = make_pt_dropoout_net(
@@ -68,12 +76,14 @@ def find_performant_dropout_net(
                     hidden_layers=num_hl,
                     p=p,
                 )
-                train_net(20, dropout_net, train_loader, preproc=True)
+                epoch_losses = train_net(20, dropout_net, train_loader, preproc=True)
                 _, dropout_acc = test_net(dropout_net, test_loader)
 
                 results[("dropout", num_hl, num_hu)].append(dropout_acc)
+                model_losses[("dropout", num_hl, num_hu)].append(epoch_losses)
 
     print(dict(results))
+    print(dict(model_losses))
 
 
 if __name__ == "__main__":
