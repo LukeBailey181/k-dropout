@@ -16,21 +16,30 @@ else:
     DEVICE = "cpu"
 
 
-def test_net(net, dataset):
+def test_net(net, dataset, preproc=False, device=DEVICE):
     """
     Evaulates inputted net on inputted dataset
     """
-
+    if preproc:
+        preproc_data = []
+        for batch in dataset:
+            X, y = batch
+            X = X.to(device)
+            y = y.to(device)
+            preproc_data.append([X, y])
+        dataset = preproc_data
     criterion = nn.CrossEntropyLoss()
-    net.to(DEVICE)
+
+    net.to(device)
     net.eval()
     total_loss = total_correct = total_examples = 0
     with torch.no_grad():
         for data in dataset:
-
             X, y = data
-            X = X.to(DEVICE)
-            y = y.to(DEVICE)
+            if not preproc:
+                X = X.to(device)
+                y = y.to(device)
+
             output = net(X)
             loss = criterion(output, y)
             total_loss += loss.item()
@@ -40,7 +49,7 @@ def test_net(net, dataset):
     return total_loss, total_correct / total_examples
 
 
-def train_net(epochs, net, trainset, lr=0.005, plot=False, preproc=False):
+def train_net(epochs, net, trainset, lr=0.005, plot=False, preproc=False, device=DEVICE):
     """ "
     Trains inputted net using provided trainset.
     """
@@ -48,8 +57,8 @@ def train_net(epochs, net, trainset, lr=0.005, plot=False, preproc=False):
         preproc_data = []
         for batch in trainset:
             X, y = batch
-            X = X.to(DEVICE)
-            y = y.to(DEVICE)
+            X = X.to(device)
+            y = y.to(device)
             preproc_data.append([X, y])
         trainset = preproc_data
 
@@ -60,7 +69,7 @@ def train_net(epochs, net, trainset, lr=0.005, plot=False, preproc=False):
     epoch_losses = []
 
     net.train()
-    net.to(DEVICE)
+    net.to(device)
     for epoch in range(epochs):
 
         epoch_loss = 0
@@ -70,8 +79,8 @@ def train_net(epochs, net, trainset, lr=0.005, plot=False, preproc=False):
         for data in trainset:
             X, y = data
             if not preproc:
-                X = X.to(DEVICE)
-                y = y.to(DEVICE)
+                X = X.to(device)
+                y = y.to(device)
 
             net.zero_grad()
             output = net(X)
