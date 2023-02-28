@@ -1,5 +1,5 @@
 import torch
-from torch import nn
+from torch import nn, Tensor
 
 
 class StochasticKDropout(nn.Module):
@@ -10,7 +10,7 @@ class StochasticKDropout(nn.Module):
         p: probability of an element to be zeroed. Default: 0.5
     """
 
-    def __init__(self, k, p=0.5):
+    def __init__(self, k: int, p: float=0.5):
         super(StochasticKDropout, self).__init__()
         self.k = k
         self.p = p
@@ -18,7 +18,7 @@ class StochasticKDropout(nn.Module):
         self.generator = torch.Generator()
         self.seed = self.generator.initial_seed()
 
-    def forward(self, x):
+    def forward(self, x: Tensor) -> Tensor:
         if self.training:
             if self.uses % self.k == 0:  # update mask seed every k steps
                 self.seed = self.generator.seed()
@@ -29,6 +29,9 @@ class StochasticKDropout(nn.Module):
             mask = (torch.rand(x.shape, generator=self.generator) > self.p).to(x.device)
             return mask * x * (1.0 / (1 - self.p))  # mask and scale
         return x
+
+    def extra_repr(self) -> str:
+        return f'p={self.p}, k={self.k}'
 
 
 class PoolKDropout(nn.Module):
@@ -42,14 +45,14 @@ class PoolKDropout(nn.Module):
         p: probability of an element to be zeroed. Default: 0.5
     """
 
-    def __init__(self, n_masks, p=0.5):
+    def __init__(self, n_masks: int, p: float=0.5):
         super(PoolKDropout, self).__init__()
         self.n_masks = n_masks
         self.p = p
         self.generator = torch.Generator()
         self.mask_seeds = [self.generator.seed() for _ in range(n_masks)]
 
-    def forward(self, x):
+    def forward(self, x: Tensor) -> Tensor:
         if self.training:
             seed_index = torch.randint(high=self.n_masks, size=(1,)).item()
             self.generator.manual_seed(self.mask_seeds[seed_index])
@@ -57,6 +60,9 @@ class PoolKDropout(nn.Module):
             mask = (torch.rand(x.shape, generator=self.generator) > self.p).to(x.device)
             return mask * x * (1.0 / (1 - self.p))  # mask and scale
         return x
+
+    def extra_repr(self) -> str:
+        return f'p={self.p}, n_masks={self.n_masks}'
 
 
 class RRKDropout(nn.Module):
@@ -69,7 +75,7 @@ class RRKDropout(nn.Module):
         p: probability of an element to be zeroed. Default: 0.5
     """
 
-    def __init__(self, n_masks, k, p=0.5):
+    def __init__(self, n_masks: int, k: int, p: float=0.5):
         super(RRKDropout, self).__init__()
         self.n_masks = n_masks
         self.k = k
@@ -79,7 +85,7 @@ class RRKDropout(nn.Module):
         self.mask_seeds = [self.generator.seed() for _ in range(n_masks)]
         self.mask_idx = -1
 
-    def forward(self, x):
+    def forward(self, x: Tensor) -> Tensor:
         if self.training:
             if self.uses % self.k == 0:  # rotate mask every k steps
                 self.mask_index = (self.mask_idx + 1) % self.n_masks
@@ -89,3 +95,6 @@ class RRKDropout(nn.Module):
             mask = (torch.rand(x.shape, generator=self.generator) > self.p).to(x.device)
             return mask * x * (1.0 / (1 - self.p))  # mask and scale
         return x
+
+    def extra_repr(self) -> str:
+        return f'p={self.p}, n_masks={self.n_masks}, k={self.k}'
