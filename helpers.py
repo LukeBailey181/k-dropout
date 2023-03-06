@@ -108,7 +108,7 @@ def train_net(
 
         epoch_losses.append(epoch_loss)
 
-        if trainset is not None and epoch % eval_every == 0:
+        if testset is not None and epoch % eval_every == 0:
             # Evaluate model
             test_loss, acc = test_net(net, trainset, preproc=preproc)
             test_losses[epoch] = test_loss
@@ -124,6 +124,11 @@ def train_net(
         plt.title("Training Loss")
         plt.xlabel("Epoch")
         plt.show()
+
+    # Final test of model
+    test_loss, acc = test_net(net, trainset, preproc=preproc)
+    test_losses[epochs - 1] = test_loss
+    test_accs[epochs - 1] = acc
 
     return {
         "train_epoch_losses": epoch_losses,
