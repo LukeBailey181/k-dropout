@@ -4,6 +4,7 @@ from torch import nn
 import torch.nn.functional as F
 import torchvision
 from matplotlib import pyplot as plt
+from tqdm import tqdm
 
 from networks import make_standard_net, make_skd_net
 
@@ -16,18 +17,28 @@ else:
     DEVICE = "cpu"
 
 
+def process_dataset(dataset, device=DEVICE):
+    """
+    Iterates through datset, applying transforms associated with dataloader and
+    moving tensors onto device
+    """
+    preproc_data = []
+    for batch in dataset:
+        X, y = batch
+        X = X.to(device)
+        y = y.to(device)
+        preproc_data.append([X, y])
+
+    return preproc_data
+
+
 def test_net(net, dataset, preproc=False, device=DEVICE):
     """
     Evaulates inputted net on inputted dataset
     """
     if preproc:
-        preproc_data = []
-        for batch in dataset:
-            X, y = batch
-            X = X.to(device)
-            y = y.to(device)
-            preproc_data.append([X, y])
-        dataset = preproc_data
+        dataset = process_dataset(dataset, device)
+
     criterion = nn.CrossEntropyLoss()
 
     net.to(device)
@@ -49,33 +60,38 @@ def test_net(net, dataset, preproc=False, device=DEVICE):
     return total_loss, total_correct / total_examples
 
 
-def train_net(epochs, net, trainset, lr=0.005, plot=False, preproc=False, device=DEVICE):
-    """ "
+def train_net(
+    epochs,
+    net,
+    trainset,
+    testset=None,
+    eval_every=1,
+    lr=0.005,
+    plot=False,
+    preproc=False,
+    device=DEVICE,
+):
+    """
     Trains inputted net using provided trainset.
     """
     if preproc:
-        preproc_data = []
-        for batch in trainset:
-            X, y = batch
-            X = X.to(device)
-            y = y.to(device)
-            preproc_data.append([X, y])
-        trainset = preproc_data
+        trainset = process_dataset(trainset, device)
+        if testset is not None:
+            testset = process_dataset(testset, device)
 
     criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(net.parameters(), lr)
 
     losses = []
     epoch_losses = []
+    test_losses = {}
+    test_accs = {}
 
     net.train()
     net.to(device)
-    for epoch in range(epochs):
+    for epoch in tqdm(range(epochs)):
 
         epoch_loss = 0
-        if epoch % 1 == 0:
-            print(f"Epoch {epoch}")
-
         for data in trainset:
             X, y = data
             if not preproc:
@@ -92,6 +108,12 @@ def train_net(epochs, net, trainset, lr=0.005, plot=False, preproc=False, device
 
         epoch_losses.append(epoch_loss)
 
+        if testset is not None and epoch % eval_every == 0:
+            # Evaluate model
+            test_loss, acc = test_net(net, testset, preproc=False)
+            test_losses[epoch] = test_loss
+            test_accs[epoch] = acc
+
     if plot:
         plt.plot([i for i in range(len(losses[10:]))], losses[10:])
         plt.title("Training Loss")
@@ -103,7 +125,17 @@ def train_net(epochs, net, trainset, lr=0.005, plot=False, preproc=False, device
         plt.xlabel("Epoch")
         plt.show()
 
-    return epoch_losses
+    # Final test of model
+    test_loss, acc = test_net(net, testset, preproc=False)
+    test_losses[epochs - 1] = test_loss
+    test_accs[epochs - 1] = acc
+
+    return {
+        "train_epoch_losses": epoch_losses,
+        "train_batch_losses": losses,
+        "test_losses": test_losses,
+        "test_accs": test_accs,
+    }
 
 
 def get_mnist(train_batch_size=64, test_batch_size=1000, num_workers=0):

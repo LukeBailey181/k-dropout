@@ -7,15 +7,20 @@ from torch import nn, Tensor
 class StochasticKDropout(nn.Module):
     r"""
     Module for k-dropout, where each dropout mask is used for k consecutive steps.
+    Input activations should be of shape (batch_size * d), meaning batch dimension
+    should be first.
     Arguments:
         k: number of steps to use the same mask.
         p: probability of an element to be zeroed. Default: 0.5
+        batch_mask_share: If true, then each activation in the input batched is masked
+            the same. If false, each activation has its own mask generated.
     """
 
-    def __init__(self, k: int, p: float=0.5):
+    def __init__(self, k: int, p: float = 0.5, batch_mask_share=False):
         super(StochasticKDropout, self).__init__()
         self.k = k
         self.p = p
+        self.batch_mask_share = batch_mask_share
 
         self.uses = 0
         self.seed = torch.Generator().seed()
@@ -29,12 +34,20 @@ class StochasticKDropout(nn.Module):
                 g.manual_seed(self.seed)
             self.uses += 1
 
-            mask = torch.rand(x.shape, device=x.device, generator=g) >= self.p
+            if self.batch_mask_share:
+                # Share same mask across batch
+                batch_size, d = x.shape
+                single_mask = torch.rand((d), device=x.device, generator=g) >= self.p
+                mask = single_mask.repeat(batch_size, 1)
+            else:
+                # Use a new mask for each activation
+                mask = torch.rand(x.shape, device=x.device, generator=g) >= self.p
+
             return (1.0 / (1 - self.p)) * (mask * x)  # mask and scale
         return x
 
     def extra_repr(self) -> str:
-        return f'p={self.p}, k={self.k}'
+        return f"p={self.p}, k={self.k}"
 
 
 class PoolKDropout(nn.Module):
@@ -48,10 +61,11 @@ class PoolKDropout(nn.Module):
         p: probability of an element to be zeroed. Default: 0.5
     """
 
-    def __init__(self, n_masks: int, p: float=0.5):
+    def __init__(self, n_masks: int, p: float = 0.5, batch_mask_share=False):
         super(PoolKDropout, self).__init__()
         self.n_masks = n_masks
         self.p = p
+        self.batch_mask_share = batch_mask_share
 
         g = torch.Generator()
         self.mask_seeds = [g.seed() for _ in range(n_masks)]
@@ -62,12 +76,20 @@ class PoolKDropout(nn.Module):
             g = torch.Generator(device=x.device)
             g.manual_seed(self.mask_seeds[seed_index])
 
-            mask = torch.rand(x.shape, device=x.device, generator=g) >= self.p
+            if self.batch_mask_share:
+                # Share same mask across batch
+                batch_size, d = x.shape
+                single_mask = torch.rand((d), device=x.device, generator=g) >= self.p
+                mask = single_mask.repeat(batch_size, 1)
+            else:
+                # Use a new mask for each activation
+                mask = torch.rand(x.shape, device=x.device, generator=g) >= self.p
+
             return (1.0 / (1 - self.p)) * (mask * x)  # mask and scale
         return x
 
     def extra_repr(self) -> str:
-        return f'p={self.p}, n_masks={self.n_masks}'
+        return f"p={self.p}, n_masks={self.n_masks}"
 
 
 '''
@@ -107,21 +129,21 @@ class RRKDropout(nn.Module):
 '''
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     trials = 100
     array_size = 1_000_000
-    devices = ['cpu'] + ['cuda'] if torch.cuda.is_available() else []
-    rtol = .01
+    devices = ["cpu"] + ["cuda"] if torch.cuda.is_available() else []
+    rtol = 0.01
 
     # test correctness
     # stochastic k-dropout
-    ps = [0, .25, .5, .75]
+    ps = [0, 0.25, 0.5, 0.75]
     ks = [1, 2, 3, 5]
     for device in devices:
         for k in ks:
             for p in ps:
                 skd = StochasticKDropout(k=k, p=p)
-                print(f'StochasticKDropout: device={device} k={k} p={p}')
+                print(f"StochasticKDropout: device={device} k={k} p={p}")
                 for t in range(trials):
                     x = torch.ones((array_size,), device=device)
                     out = skd(x).cpu()
@@ -130,16 +152,16 @@ if __name__ == '__main__':
                         mask = out != 0
 
                     assert np.isclose(p, p_out, rtol=rtol)  # p correct
-                    assert np.isclose(out.max().item(), 1/(1-p))  # scaling correct
+                    assert np.isclose(out.max().item(), 1 / (1 - p))  # scaling correct
 
     # pool k-dropout
-    ps = [0, .25, .5, .75]
+    ps = [0, 0.25, 0.5, 0.75]
     n_masks = [1, 2, 3, 5]
     for device in devices:
         for n_mask in n_masks:
             for p in ps:
                 skd = PoolKDropout(n_masks=n_mask, p=p)
-                print(f'PoolKDropout: device={device} n_masks={n_mask} p={p}')
+                print(f"PoolKDropout: device={device} n_masks={n_mask} p={p}")
                 masks = []
                 for t in range(trials):
                     x = torch.ones((array_size,), device=device)
@@ -153,7 +175,7 @@ if __name__ == '__main__':
                         masks.append(mask)
 
                     assert np.isclose(p, p_out, rtol=rtol)  # p correct
-                    assert np.isclose(out.max().item(), 1/(1-p))  # scaling correct
+                    assert np.isclose(out.max().item(), 1 / (1 - p))  # scaling correct
                 # mask pool correct
                 if p == 0:
                     assert len(masks) == 1
@@ -167,10 +189,10 @@ if __name__ == '__main__':
     n_trials = 10_000
 
     layers = [
-            nn.Dropout(p=.5),
-            StochasticKDropout(k=10, p=.5),
-            PoolKDropout(n_masks=100, p=.5),
-            ]
+        nn.Dropout(p=0.5),
+        StochasticKDropout(k=10, p=0.5),
+        PoolKDropout(n_masks=100, p=0.5),
+    ]
 
     for device in devices:
         input = torch.randn((input_size,), device=device)
@@ -180,4 +202,4 @@ if __name__ == '__main__':
             for _ in range(n_trials):
                 out = layer(input)
 
-            print(f'{layer}, device={device}: {time.perf_counter() - start_time:.2f}s')
+            print(f"{layer}, device={device}: {time.perf_counter() - start_time:.2f}s")

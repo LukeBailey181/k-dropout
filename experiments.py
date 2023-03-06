@@ -60,9 +60,8 @@ def find_performant_dropout_net(
                     hidden_units=num_hu,
                     hidden_layers=num_hl,
                 )
-                epoch_losses = train_net(
-                    epochs, standard_net, train_loader, preproc=True
-                )
+                train_data = train_net(epochs, standard_net, train_loader, preproc=True)
+                epoch_losses = train_data["train_epoch_losses"]
                 _, standard_acc = test_net(standard_net, test_loader)
 
                 results[("standard", num_hl, num_hu)].append(standard_acc)
@@ -76,9 +75,8 @@ def find_performant_dropout_net(
                     hidden_layers=num_hl,
                     p=p,
                 )
-                epoch_losses = train_net(
-                    epochs, dropout_net, train_loader, preproc=True
-                )
+                train_data = train_net(epochs, dropout_net, train_loader, preproc=True)
+                epoch_losses = train_data["train_epoch_losses"]
                 _, dropout_acc = test_net(dropout_net, test_loader)
 
                 results[("dropout", num_hl, num_hu)].append(dropout_acc)
