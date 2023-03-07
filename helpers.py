@@ -87,10 +87,10 @@ def train_net(
     test_losses = {}
     test_accs = {}
 
-    net.train()
     net.to(device)
     for epoch in tqdm(range(epochs)):
 
+        net.train()
         epoch_loss = 0
         for data in trainset:
             X, y = data
