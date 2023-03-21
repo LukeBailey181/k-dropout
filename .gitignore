@@ -1,3 +1,5 @@
+wandb/
+
 # Datasets
 experiments.ipynb
 datasets
