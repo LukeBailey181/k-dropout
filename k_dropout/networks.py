@@ -1,16 +1,10 @@
 from torch import nn
 from typing import Dict, Optional, Any
 
-from k_dropout_modules import StochasticKDropout, PoolKDropout
+from k_dropout.modules import SequentialKDropout, PoolKDropout
 
 
-def init_weights(m):
-    """He init weights"""
-    if isinstance(m, nn.Linear):
-        nn.init.kaiming_normal_(m.weight, nonlinearity="relu")
-
-
-def _make_net(
+def make_net(
     input_dim: int,
     num_classes: int,
     hidden_units: int,
@@ -48,7 +42,7 @@ def make_pt_dropoout_net(
 ) -> nn.Module:
     """Return a NN that uses standard pytorch dropout"""
 
-    return _make_net(
+    return make_net(
         input_dim,
         num_classes,
         hidden_units,
@@ -67,14 +61,14 @@ def make_skd_net(
     p: float = 0.5,
     batch_mask_share: bool = False,
 ) -> nn.Module:
-    """Return a NN that uses StochasticKDropout"""
+    """Return a NN that uses SequentialKDropout"""
 
-    return _make_net(
+    return make_net(
         input_dim,
         num_classes,
         hidden_units,
         hidden_layers,
-        dropout_layer=StochasticKDropout,
+        dropout_layer=SequentialKDropout,
         dropout_kargs={"p": p, "k": k, "batch_mask_share": batch_mask_share},
     )
 
@@ -88,9 +82,9 @@ def make_pool_kd_net(
     p: float = 0.5,
     batch_mask_share: bool = False,
 ) -> nn.Module:
-    """Return a NN that uses StochasticKDropout"""
+    """Return a NN that uses PoolKDropout"""
 
-    return _make_net(
+    return make_net(
         input_dim,
         num_classes,
         hidden_units,
@@ -112,7 +106,7 @@ def make_standard_net(
 ) -> nn.Module:
     """Return a NN without dropout"""
 
-    return _make_net(
+    return make_net(
         input_dim, num_classes, hidden_units, hidden_layers, dropout_layer=None
     )
 
@@ -128,7 +122,7 @@ if __name__ == "__main__":
     print(pt_dropout_net)
 
     skd_net = make_skd_net()
-    print("STOCHASTIC K DROPOUT NET:")
+    print("SEQUENTIAL K DROPOUT NET:")
     print(skd_net)
 
     pool_kd_net = make_pool_kd_net()
