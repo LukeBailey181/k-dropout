@@ -6,6 +6,8 @@ import torch.nn as nn
 import numpy as np
 import wandb
 
+from wandb_helpers import write_git_snapshot
+
 from k_dropout.networks import make_net
 from k_dropout.datasets import get_mnist, get_cifar10, process_dataset
 from k_dropout.modules import SequentialKDropout, PoolKDropout
@@ -132,7 +134,16 @@ if __name__ == '__main__':
 
     # wandb integration
     if args.use_wandb:
-        wandb.init(project='k-dropout', config=vars(args), name=args.run_name)
+        # log the git diff and untracked files as an artifact
+        snapshot_name, snapshot_path = write_git_snapshot()
+
+        config = vars(args)
+        config['git_snapshot'] = snapshot_name
+        run = wandb.init(project='k-dropout', config=config, name=args.run_name)
+
+        snapshot_artifact = wandb.Artifact(snapshot_name, type='git_snapshot')
+        snapshot_artifact.add_file(snapshot_path)
+        wandb.log_artifact(snapshot_artifact)
 
     # create model
     dropout_layer, layer_kwargs = get_dropout_layer(
