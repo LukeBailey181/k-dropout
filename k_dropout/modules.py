@@ -15,6 +15,7 @@ class SequentialKDropout(nn.Module):
         m: number of masks to use per batch, defaults to 0 which will set m=batch_size for
             any input.
     """
+
     def __init__(self, k: int, p: float = 0.5, m=-1):
         super(SequentialKDropout, self).__init__()
         self.k = k
@@ -90,12 +91,12 @@ class PoolKDropout(nn.Module):
 
         if self.training:
             g = torch.Generator(device=x.device)
-            seed_idxs = torch.randint(high=self.n_masks, size=(self.m,)) 
+            seed_idxs = torch.randint(high=self.n_masks, size=(self.m,))
             gen_seeds = [self.mask_seeds[i] for i in seed_idxs]
-            
-            masks = [] 
+
+            masks = []
             for seed in gen_seeds:
-                g.manual_seed(seed) 
+                g.manual_seed(seed)
                 masks.append(torch.rand(d, device=x.device, generator=g) >= self.p)
 
             mask_block = torch.stack(masks)

@@ -32,44 +32,72 @@ def get_mnist(train_batch_size=64, test_batch_size=1000, num_workers=2):
     test_batch_size -- size of batches in returned test set dataloader
     """
 
-    transform = transforms.Compose([
+    transform = transforms.Compose(
+        [
             transforms.ToTensor(),
             transforms.Normalize((0.1307,), (0.3081,)),  # to mean 0, std 1
             transforms.Lambda(lambda x: torch.flatten(x)),
-            ])
+        ]
+    )
 
     train_set = datasets.MNIST(
-            root=DATASET_ROOT, train=True, download=True, transform=transform)
+        root=DATASET_ROOT, train=True, download=True, transform=transform
+    )
     test_set = datasets.MNIST(
-            root=DATASET_ROOT, train=False, download=True, transform=transform)
+        root=DATASET_ROOT, train=False, download=True, transform=transform
+    )
 
     train_loader = torch.utils.data.DataLoader(
-            train_set, batch_size=train_batch_size, shuffle=True, drop_last=True,
-            pin_memory=True, num_workers=num_workers)
+        train_set,
+        batch_size=train_batch_size,
+        shuffle=True,
+        drop_last=True,
+        pin_memory=True,
+        num_workers=num_workers,
+    )
     test_loader = torch.utils.data.DataLoader(
-            test_set, batch_size=test_batch_size, shuffle=False, drop_last=True,
-            pin_memory=True, num_workers=num_workers)
+        test_set,
+        batch_size=test_batch_size,
+        shuffle=False,
+        drop_last=True,
+        pin_memory=True,
+        num_workers=num_workers,
+    )
 
     return train_loader, test_loader
 
 
 def get_cifar10(train_batch_size=4, test_batch_size=4, num_workers=2):
-    transform = transforms.Compose([
+    transform = transforms.Compose(
+        [
             transforms.ToTensor(),
             transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),  # to [-1, 1]
             transforms.Lambda(lambda x: torch.flatten(x)),
-            ])
+        ]
+    )
 
     train_set = datasets.CIFAR10(
-        root=DATASET_ROOT, train=True, download=True, transform=transform)
+        root=DATASET_ROOT, train=True, download=True, transform=transform
+    )
     test_set = datasets.CIFAR10(
-        root=DATASET_ROOT, train=False, download=True, transform=transform)
+        root=DATASET_ROOT, train=False, download=True, transform=transform
+    )
 
     train_loader = torch.utils.data.DataLoader(
-        train_set, batch_size=train_batch_size, shuffle=True, drop_last=True,
-        pin_memory=True, num_workers=num_workers)
+        train_set,
+        batch_size=train_batch_size,
+        shuffle=True,
+        drop_last=True,
+        pin_memory=True,
+        num_workers=num_workers,
+    )
     test_loader = torch.utils.data.DataLoader(
-        test_set, batch_size=test_batch_size, shuffle=False, drop_last=True,
-        pin_memory=True, num_workers=num_workers)
+        test_set,
+        batch_size=test_batch_size,
+        shuffle=False,
+        drop_last=True,
+        pin_memory=True,
+        num_workers=num_workers,
+    )
 
     return train_loader, test_loader
