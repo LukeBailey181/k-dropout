@@ -59,7 +59,7 @@ def make_skd_net(
     hidden_layers: int = 2,
     k: int = 1,
     p: float = 0.5,
-    batch_mask_share: bool = False,
+    m: int = -1,
 ) -> nn.Module:
     """Return a NN that uses SequentialKDropout"""
 
@@ -69,7 +69,7 @@ def make_skd_net(
         hidden_units,
         hidden_layers,
         dropout_layer=SequentialKDropout,
-        dropout_kargs={"p": p, "k": k, "batch_mask_share": batch_mask_share},
+        dropout_kargs={"p": p, "k": k, "m": m},
     )
 
 
@@ -80,7 +80,7 @@ def make_pool_kd_net(
     hidden_layers: int = 2,
     n_masks: int = 5,
     p: float = 0.5,
-    batch_mask_share: bool = False,
+    m: int = -1,
 ) -> nn.Module:
     """Return a NN that uses PoolKDropout"""
 
@@ -93,7 +93,7 @@ def make_pool_kd_net(
         dropout_kargs={
             "p": p,
             "n_masks": n_masks,
-            "batch_mask_share": batch_mask_share,
+            "m": m,
         },
     )
 

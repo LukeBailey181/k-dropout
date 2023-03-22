@@ -12,19 +12,30 @@ class SequentialKDropout(nn.Module):
         p: probability of an element to be zeroed. Default: 0.5
         batch_mask_share: If true, then each activation in the input batched is masked
             the same. If false, each activation has its own mask generated.
+        m: number of masks to use per batch, defaults to 0 which will set m=batch_size for
+            any input.
     """
-
-    # TODO: masks per batch (or just m?), batch_dim: int = 0
-    def __init__(self, k: int, p: float = 0.5, batch_mask_share=False):
+    def __init__(self, k: int, p: float = 0.5, m=-1):
         super(SequentialKDropout, self).__init__()
         self.k = k
         self.p = p
-        self.batch_mask_share = batch_mask_share
+        self.m = m
 
         self.uses = 0
         self.seed = torch.Generator().seed()
 
     def forward(self, x: Tensor) -> Tensor:
+
+        if self.m == -1:
+            self.m = x.shape[0]
+
+        # Check m divides batch size
+        batch_size, d = x.shape
+        if batch_size % self.m != 0:
+            raise ValueError(
+                f"m value of {self.m} does not divide batch_size of value {batch_size}"
+            )
+
         if self.training:
             g = torch.Generator(device=x.device)
             if self.uses % self.k == 0:  # update mask seed every k steps
@@ -33,20 +44,16 @@ class SequentialKDropout(nn.Module):
                 g.manual_seed(self.seed)
             self.uses += 1
 
-            if self.batch_mask_share:
-                # Share same mask across batch
-                batch_size, d = x.shape
-                single_mask = torch.rand((d), device=x.device, generator=g) >= self.p
-                mask = single_mask.repeat(batch_size, 1)
-            else:
-                # Use a new mask for each activation
-                mask = torch.rand(x.shape, device=x.device, generator=g) >= self.p
+            mask_len = int(batch_size / self.m)
+            mask_block = torch.rand((self.m, d), device=x.device, generator=g) >= self.p
+            mask = mask_block.repeat(mask_len, 1)
 
             return (1.0 / (1 - self.p)) * (mask * x)  # mask and scale
+
         return x
 
     def extra_repr(self) -> str:
-        return f"p={self.p}, k={self.k}"
+        return f"p={self.p}, k={self.k}, m={self.m}"
 
 
 class PoolKDropout(nn.Module):
@@ -60,37 +67,47 @@ class PoolKDropout(nn.Module):
         p: probability of an element to be zeroed. Default: 0.5
     """
 
-    # TODO: update batch mask share
-    # TODO: rename n_masks to pool_size
-    def __init__(self, n_masks: int, p: float = 0.5, batch_mask_share=False):
+    def __init__(self, n_masks: int, p: float = 0.5, m=-1):
         super(PoolKDropout, self).__init__()
         self.n_masks = n_masks
         self.p = p
-        self.batch_mask_share = batch_mask_share
+        self.m = m
 
         g = torch.Generator()
         self.mask_seeds = [g.seed() for _ in range(n_masks)]
 
     def forward(self, x: Tensor) -> Tensor:
-        if self.training:
-            seed_index = torch.randint(high=self.n_masks, size=(1,)).item()
-            g = torch.Generator(device=x.device)
-            g.manual_seed(self.mask_seeds[seed_index])
 
-            if self.batch_mask_share:
-                # Share same mask across batch
-                batch_size, d = x.shape
-                single_mask = torch.rand((d), device=x.device, generator=g) >= self.p
-                mask = single_mask.repeat(batch_size, 1)
-            else:
-                # Use a new mask for each activation
-                mask = torch.rand(x.shape, device=x.device, generator=g) >= self.p
+        if self.m == -1:
+            self.m = x.shape[0]
+
+        # Check m divides batch size
+        batch_size, d = x.shape
+        if batch_size % self.m != 0:
+            raise ValueError(
+                f"m value of {self.m} does not divide batch_size of value {batch_size}"
+            )
+
+        if self.training:
+            g = torch.Generator(device=x.device)
+            seed_idxs = torch.randint(high=self.n_masks, size=(self.m,)) 
+            gen_seeds = [self.mask_seeds[i] for i in seed_idxs]
+            
+            masks = [] 
+            for seed in gen_seeds:
+                g.manual_seed(seed) 
+                masks.append(torch.rand(d, device=x.device, generator=g) >= self.p)
+
+            mask_block = torch.stack(masks)
+
+            mask_len = int(batch_size / self.m)
+            mask = mask_block.repeat(mask_len, 1)
 
             return (1.0 / (1 - self.p)) * (mask * x)  # mask and scale
         return x
 
     def extra_repr(self) -> str:
-        return f"p={self.p}, n_masks={self.n_masks}"
+        return f"p={self.p}, n_masks={self.n_masks}, m={self.m}"
 
 
 '''

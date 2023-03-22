@@ -1,5 +1,6 @@
 import argparse
 import random
+from typing import Optional, Tuple
 
 import torch
 import torch.nn as nn
@@ -20,9 +21,13 @@ DROPOUT_LAYERS = ('none', 'standard', 'sequential', 'pool')
 
 
 def get_dropout_layer(
-        dropout_layer: str, p: float, k: int = None, pool_size: int = None,
-        masks_per_batch: int = None) -> tuple[nn.Module, dict]:
+        dropout_layer: str, p: float, k: Optional[int] = None, pool_size: Optional[int] = None,
+        masks_per_batch: Optional[int] = None) -> Tuple[nn.Module, dict]:
+
     kwargs = {'p': p}
+    if masks_per_batch is not None:
+        kwargs['m'] = masks_per_batch
+
     if dropout_layer == 'none':
         return None, None
     elif dropout_layer == 'standard':
@@ -31,13 +36,12 @@ def get_dropout_layer(
         if k is None:
             raise ValueError('Must specify k for sequential dropout')
         kwargs['k'] = k
-        # TODO: use masks_per_batch
         return SequentialKDropout, kwargs
     elif dropout_layer == 'pool':
         if pool_size is None:
             raise ValueError('Must specify pool_size for pool dropout')
-        kwargs['pool_size'] = pool_size
-        # TODO: use masks_per_batch
+        # TODO change this to be pool size everywhere
+        kwargs['n_masks'] = pool_size
         return PoolKDropout, kwargs
     else:
         raise ValueError(f'Unknown dropout layer {dropout_layer}')
