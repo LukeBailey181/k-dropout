@@ -6,8 +6,6 @@ import wandb
 
 if torch.cuda.is_available():
     DEVICE = "cuda"
-elif torch.backends.mps.is_available():
-    DEVICE = "mps"
 else:
     DEVICE = "cpu"
 
@@ -116,7 +114,7 @@ def train_net(
                 wandb.log({"test_loss": test_loss, "test_acc": acc}, step=example_ct)
 
     # final test of model
-    if test_set is not None and (epochs-1) not in test_losses:
+    if test_set is not None and (epochs - 1) not in test_losses:
         if return_results:
             test_loss, acc = test_net(net, test_set)
             test_losses[epochs - 1] = test_loss
