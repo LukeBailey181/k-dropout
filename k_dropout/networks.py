@@ -4,6 +4,7 @@ from typing import Dict, Optional, Any
 from k_dropout.modules import SequentialKDropout, PoolKDropout
 
 
+# TODO: add option for dropout on the input layer
 def make_net(
     input_dim: int,
     num_classes: int,
@@ -94,6 +95,8 @@ def make_pool_kd_net(
             "p": p,
             "pool_size": pool_size,
             "m": m,
+            "cache_masks": True,
+            "input_dim": hidden_units,
         },
     )
 

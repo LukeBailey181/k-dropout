@@ -70,16 +70,37 @@ class PoolKDropout(nn.Module):
         p: probability of an element to be zeroed. Default: 0.5
         m: number of masks to use per batch, defaults to -1 which will set m=batch_size
             for any input.
+        cache_masks: If true, then the mask pool is generated once on initialization.
+            This requires that the input dimension is fixed.
+        input_dim: If cache_masks is true, then this is the fixed input dimension.
     """
 
-    def __init__(self, pool_size: int, p: float = 0.5, m=-1):
+    def __init__(
+        self,
+        pool_size: int,
+        p: float = 0.5,
+        m: int = -1,
+        cache_masks: bool = False,
+        input_dim: int = None,
+    ):
         super(PoolKDropout, self).__init__()
         self.pool_size = pool_size
         self.p = p
         self.m = m
+        self.cache_masks = cache_masks
+        self.input_dim = input_dim
 
-        g = torch.Generator()
-        self.mask_seeds = [g.seed() for _ in range(pool_size)]
+        if self.cache_masks:
+            if self.input_dim is None:
+                raise ValueError(
+                    "If cache_masks is true, then input_dim must be specified."
+                )
+            g = torch.Generator()
+            mask_pool = torch.rand((pool_size, self.input_dim), generator=g) >= self.p
+            self.mask_pool = nn.Parameter(mask_pool, requires_grad=False)
+        else:
+            g = torch.Generator()
+            self.mask_seeds = [g.seed() for _ in range(pool_size)]
 
     def forward(self, x: Tensor) -> Tensor:
         if x.dim() != 2:
@@ -93,16 +114,24 @@ class PoolKDropout(nn.Module):
             )
 
         if self.training:
-            # TODO: improve performance
+            # sample mask indices
             g = torch.Generator(device=x.device)
             masks_per_batch = self.m if self.m > 0 else batch_size
-            seed_idxs = torch.randint(high=self.pool_size, size=(masks_per_batch,))
-            gen_seeds = [self.mask_seeds[i] for i in seed_idxs]
+            seed_idxs = torch.randint(
+                high=self.pool_size, size=(masks_per_batch,), device=x.device
+            )
 
-            mask_block = torch.empty((masks_per_batch, d), device=x.device)
-            for i, seed in enumerate(gen_seeds):
-                g.manual_seed(seed)
-                mask_block[i] = torch.rand(d, device=x.device, generator=g) >= self.p
+            # generate batch mask
+            if self.cache_masks:
+                mask_block = self.mask_pool[seed_idxs]
+            else:
+                gen_seeds = [self.mask_seeds[i] for i in seed_idxs]
+                mask_block = torch.empty((masks_per_batch, d), device=x.device)
+                for i, seed in enumerate(gen_seeds):
+                    g.manual_seed(seed)
+                    mask_block[i] = (
+                        torch.rand(d, device=x.device, generator=g) >= self.p
+                    )
 
             mask_n_repeats = batch_size // masks_per_batch
             batch_mask = mask_block.repeat(mask_n_repeats, 1)
@@ -111,4 +140,4 @@ class PoolKDropout(nn.Module):
         return x
 
     def extra_repr(self) -> str:
-        return f"p={self.p}, pool_size={self.pool_size}, m={self.m}"
+        return f"p={self.p}, pool_size={self.pool_size}, m={self.m}, cache_masks={self.cache_masks}, input_dim={self.input_dim}"

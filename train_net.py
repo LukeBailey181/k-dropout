@@ -25,11 +25,13 @@ def get_dropout_layer(
     p: float,
     k: Optional[int] = None,
     pool_size: Optional[int] = None,
-    masks_per_batch: Optional[int] = None,
+    m: Optional[int] = None,
+    cache_masks: bool = False,
+    input_dim: Optional[int] = None,
 ) -> Tuple[nn.Module, dict]:
     kwargs = {"p": p}
-    if masks_per_batch is not None:
-        kwargs["m"] = masks_per_batch
+    if m is not None:
+        kwargs["m"] = m
 
     if dropout_layer == "none":
         return None, None
@@ -44,6 +46,9 @@ def get_dropout_layer(
         if pool_size is None:
             raise ValueError("Must specify pool_size for pool dropout")
         kwargs["pool_size"] = pool_size
+        kwargs["cache_masks"] = cache_masks
+        if cache_masks:
+            kwargs["input_dim"] = input_dim
         return PoolKDropout, kwargs
     else:
         raise ValueError(f"Unknown dropout layer {dropout_layer}")
@@ -105,15 +110,21 @@ if __name__ == "__main__":
     parser.add_argument(
         "--output_size", type=int, required=True, help="Dimension of the model output"
     )
+    # k dropout common
     parser.add_argument("--p", type=float, default=0.5, help="Dropout probability")
+    parser.add_argument(
+        "--m",
+        type=int,
+        help="Number of submasks to include in each batch for k dropout",
+    )
+    # sequential k dropout
     parser.add_argument("--k", type=int, help="Mask repeat parameter for k dropout")
+    # pool k dropout
     parser.add_argument(
         "--pool_size", type=int, help="Number of masks in the pool for pool k dropout"
     )
     parser.add_argument(
-        "--masks_per_batch",
-        type=int,
-        help="Number of submasks to include in each batch for k dropout",
+        "--cache_masks", action="store_true", help="Cache masks for pool k dropout"
     )
     # dataset
     parser.add_argument(
@@ -183,12 +194,15 @@ if __name__ == "__main__":
         wandb.log_artifact(snapshot_artifact)
 
     # create model
+    # TODO refactor this (and dataset) to just pass in args as a dictionary (or maybe just **vars(args))
     dropout_layer, layer_kwargs = get_dropout_layer(
         dropout_layer=args.dropout_layer,
         p=args.p,
         k=args.k,
         pool_size=args.pool_size,
-        masks_per_batch=args.masks_per_batch,
+        m=args.m,
+        cache_masks=args.cache_masks,
+        input_dim=args.hidden_size,
     )
     model = make_net(
         input_dim=args.input_size,
