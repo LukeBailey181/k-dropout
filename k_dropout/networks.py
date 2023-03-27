@@ -6,30 +6,30 @@ from k_dropout.modules import SequentialKDropout, PoolKDropout
 
 # TODO: add option for dropout on the input layer
 def make_net(
-    input_dim: int,
-    num_classes: int,
-    hidden_units: int,
-    hidden_layers: int,
+    input_size: int,
+    output_size: int,
+    hidden_size: int,
+    n_hidden: int,
     dropout_layer: Optional[Any] = None,
     dropout_kargs: Dict[str, Any] = {},
 ) -> nn.Module:
     """Helper function for making NNs"""
 
     input = [
-        nn.Linear(input_dim, hidden_units),
+        nn.Linear(input_size, hidden_size),
         nn.ReLU(),
     ]
     if dropout_layer is not None:
         input.append(dropout_layer(**dropout_kargs))
 
     hidden = []
-    for _ in range(hidden_layers):
-        hidden.append(nn.Linear(hidden_units, hidden_units))
+    for _ in range(n_hidden):
+        hidden.append(nn.Linear(hidden_size, hidden_size))
         hidden.append(nn.ReLU())
         if dropout_layer is not None:
             hidden.append(dropout_layer(**dropout_kargs))
 
-    output = [nn.Linear(hidden_units, num_classes)]
+    output = [nn.Linear(hidden_size, output_size)]
 
     return nn.Sequential(*input, *hidden, *output)
 
@@ -65,10 +65,10 @@ def make_skd_net(
     """Return a NN that uses SequentialKDropout"""
 
     return make_net(
-        input_dim,
-        num_classes,
-        hidden_units,
-        hidden_layers,
+        input_size=input_dim,
+        output_size=num_classes,
+        hidden_size=hidden_units,
+        n_hidden=hidden_layers,
         dropout_layer=SequentialKDropout,
         dropout_kargs={"p": p, "k": k, "m": m},
     )
@@ -86,10 +86,10 @@ def make_pool_kd_net(
     """Return a NN that uses PoolKDropout"""
 
     return make_net(
-        input_dim,
-        num_classes,
-        hidden_units,
-        hidden_layers,
+        input_size=input_dim,
+        output_size=num_classes,
+        hidden_size=hidden_units,
+        n_hidden=hidden_layers,
         dropout_layer=PoolKDropout,
         dropout_kargs={
             "p": p,

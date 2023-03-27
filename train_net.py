@@ -27,7 +27,7 @@ def get_dropout_layer(
     pool_size: Optional[int] = None,
     m: Optional[int] = None,
     cache_masks: bool = False,
-    input_dim: Optional[int] = None,
+    hidden_size: Optional[int] = None,  # input size for pool dropout with mask caching
 ) -> Tuple[nn.Module, dict]:
     kwargs = {"p": p}
     if m is not None:
@@ -48,7 +48,7 @@ def get_dropout_layer(
         kwargs["pool_size"] = pool_size
         kwargs["cache_masks"] = cache_masks
         if cache_masks:
-            kwargs["input_dim"] = input_dim
+            kwargs["input_dim"] = hidden_size
         return PoolKDropout, kwargs
     else:
         raise ValueError(f"Unknown dropout layer {dropout_layer}")
@@ -59,7 +59,7 @@ def get_dataset(
     batch_size: int,
     test_batch_size: int,
     num_workers: int,
-    preprocess: bool,
+    preprocess_dataset: bool,
     device: str,
 ):
     if dataset_name == "mnist":
@@ -71,7 +71,7 @@ def get_dataset(
     else:
         raise ValueError(f"Unknown dataset {dataset_name}")
 
-    if preprocess:
+    if preprocess_dataset:
         return process_dataset(train_loader, device), process_dataset(
             test_loader, device
         )
@@ -194,7 +194,6 @@ if __name__ == "__main__":
         wandb.log_artifact(snapshot_artifact)
 
     # create model
-    # TODO refactor this (and dataset) to just pass in args as a dictionary (or maybe just **vars(args))
     dropout_layer, layer_kwargs = get_dropout_layer(
         dropout_layer=args.dropout_layer,
         p=args.p,
@@ -202,13 +201,13 @@ if __name__ == "__main__":
         pool_size=args.pool_size,
         m=args.m,
         cache_masks=args.cache_masks,
-        input_dim=args.hidden_size,
+        hidden_size=args.hidden_size,
     )
     model = make_net(
-        input_dim=args.input_size,
-        num_classes=args.output_size,
-        hidden_units=args.hidden_size,
-        hidden_layers=args.n_hidden,
+        input_size=args.input_size,
+        output_size=args.output_size,
+        hidden_size=args.hidden_size,
+        n_hidden=args.n_hidden,
         dropout_layer=dropout_layer,
         dropout_kargs=layer_kwargs,
     )
@@ -217,12 +216,12 @@ if __name__ == "__main__":
 
     # get dataset
     train_set, test_set = get_dataset(
-        args.dataset_name,
-        args.batch_size,
-        args.test_batch_size,
-        args.num_workers,
-        args.preprocess_dataset,
-        args.device,
+        dataset_name=args.dataset_name,
+        batch_size=args.batch_size,
+        test_batch_size=args.test_batch_size,
+        num_workers=args.num_workers,
+        preprocess_dataset=args.preprocess_dataset,
+        device=args.device,
     )
     print(f"Loaded {args.dataset_name} dataset")
 
