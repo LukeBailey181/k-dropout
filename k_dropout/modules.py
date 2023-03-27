@@ -12,8 +12,8 @@ class SequentialKDropout(nn.Module):
         p: probability of an element to be zeroed. Default: 0.5
         batch_mask_share: If true, then each activation in the input batched is masked
             the same. If false, each activation has its own mask generated.
-        m: number of masks to use per batch, defaults to 0 which will set m=batch_size for
-            any input.
+        m: number of masks to use per batch, defaults to -1 which will set m=batch_size
+            for any input.
     """
 
     def __init__(self, k: int, p: float = 0.5, m=-1):
@@ -26,13 +26,12 @@ class SequentialKDropout(nn.Module):
         self.seed = torch.Generator().seed()
 
     def forward(self, x: Tensor) -> Tensor:
-
-        if self.m == -1:
-            self.m = x.shape[0]
+        if x.dim() != 2:
+            raise ValueError(f"Input must be of shape (batch_size, d), got {x.shape}")
+        batch_size, d = x.shape
 
         # Check m divides batch size
-        batch_size, d = x.shape
-        if batch_size % self.m != 0:
+        if self.m > 0 and batch_size % self.m != 0:
             raise ValueError(
                 f"m value of {self.m} does not divide batch_size of value {batch_size}"
             )
@@ -45,11 +44,14 @@ class SequentialKDropout(nn.Module):
                 g.manual_seed(self.seed)
             self.uses += 1
 
-            mask_len = int(batch_size / self.m)
-            mask_block = torch.rand((self.m, d), device=x.device, generator=g) >= self.p
-            mask = mask_block.repeat(mask_len, 1)
+            masks_per_batch = self.m if self.m > 0 else batch_size
+            mask_n_repeats = batch_size // masks_per_batch
+            mask_block = (
+                torch.rand((masks_per_batch, d), device=x.device, generator=g) >= self.p
+            )
+            batch_mask = mask_block.repeat(mask_n_repeats, 1)
 
-            return (1.0 / (1 - self.p)) * (mask * x)  # mask and scale
+            return (1.0 / (1 - self.p)) * (batch_mask * x)  # mask and scale
 
         return x
 
@@ -59,90 +61,83 @@ class SequentialKDropout(nn.Module):
 
 class PoolKDropout(nn.Module):
     r"""
-    Module for the pool variant of k-dropout where a pool of n_masks masks are generated
-    and at each training step a mask is randomly selected from the pool. n_masks is
-    simply a different way of parameterizing k, as setting n_masks = total_steps / k
+    Module for the pool variant of k-dropout where a pool of pool_size masks are generated
+    and at each training step a mask is randomly selected from the pool. pool_size is
+    simply a different way of parameterizing k, as setting pool_size = total_steps / k
     means each mask will be used on average k times.
     Arguments:
-        n_masks: number of masks in the pool.
+        pool_size: number of masks in the pool.
         p: probability of an element to be zeroed. Default: 0.5
+        m: number of masks to use per batch, defaults to -1 which will set m=batch_size
+            for any input.
+        cache_masks: If true, then the mask pool is generated once on initialization.
+            This requires that the input dimension is fixed.
+        input_dim: If cache_masks is true, then this is the fixed input dimension.
     """
 
-    def __init__(self, n_masks: int, p: float = 0.5, m=-1):
+    def __init__(
+        self,
+        pool_size: int,
+        p: float = 0.5,
+        m: int = -1,
+        cache_masks: bool = False,
+        input_dim: int = None,
+    ):
         super(PoolKDropout, self).__init__()
-        self.n_masks = n_masks
+        self.pool_size = pool_size
         self.p = p
         self.m = m
+        self.cache_masks = cache_masks
+        self.input_dim = input_dim
 
-        g = torch.Generator()
-        self.mask_seeds = [g.seed() for _ in range(n_masks)]
+        if self.cache_masks:
+            if self.input_dim is None:
+                raise ValueError(
+                    "If cache_masks is true, then input_dim must be specified."
+                )
+            g = torch.Generator()
+            mask_pool = torch.rand((pool_size, self.input_dim), generator=g) >= self.p
+            self.mask_pool = nn.Parameter(mask_pool, requires_grad=False)
+        else:
+            g = torch.Generator()
+            self.mask_seeds = [g.seed() for _ in range(pool_size)]
 
     def forward(self, x: Tensor) -> Tensor:
-
-        if self.m == -1:
-            self.m = x.shape[0]
+        if x.dim() != 2:
+            raise ValueError(f"Input must be of shape (batch_size, d), got {x.shape}")
+        batch_size, d = x.shape
 
         # Check m divides batch size
-        batch_size, d = x.shape
-        if batch_size % self.m != 0:
+        if self.m > 0 and batch_size % self.m != 0:
             raise ValueError(
                 f"m value of {self.m} does not divide batch_size of value {batch_size}"
             )
 
         if self.training:
+            # sample mask indices
             g = torch.Generator(device=x.device)
-            seed_idxs = torch.randint(high=self.n_masks, size=(self.m,))
-            gen_seeds = [self.mask_seeds[i] for i in seed_idxs]
+            masks_per_batch = self.m if self.m > 0 else batch_size
+            seed_idxs = torch.randint(
+                high=self.pool_size, size=(masks_per_batch,), device=x.device
+            )
 
-            masks = []
-            for seed in gen_seeds:
-                g.manual_seed(seed)
-                masks.append(torch.rand(d, device=x.device, generator=g) >= self.p)
+            # generate batch mask
+            if self.cache_masks:
+                mask_block = self.mask_pool[seed_idxs]
+            else:
+                gen_seeds = [self.mask_seeds[i] for i in seed_idxs]
+                mask_block = torch.empty((masks_per_batch, d), device=x.device)
+                for i, seed in enumerate(gen_seeds):
+                    g.manual_seed(seed)
+                    mask_block[i] = (
+                        torch.rand(d, device=x.device, generator=g) >= self.p
+                    )
 
-            mask_block = torch.stack(masks)
+            mask_n_repeats = batch_size // masks_per_batch
+            batch_mask = mask_block.repeat(mask_n_repeats, 1)
 
-            mask_len = int(batch_size / self.m)
-            mask = mask_block.repeat(mask_len, 1)
-
-            return (1.0 / (1 - self.p)) * (mask * x)  # mask and scale
+            return (1.0 / (1 - self.p)) * (batch_mask * x)  # mask and scale
         return x
 
     def extra_repr(self) -> str:
-        return f"p={self.p}, n_masks={self.n_masks}, m={self.m}"
-
-
-'''
-class RRKDropout(nn.Module):
-    r"""
-    Module for the round-robin variant of k-dropout where a pool of n_masks masks are
-    generated then in training rotated and used for k consecutive steps each.
-    Arguments:
-        n_masks: number of masks in the pool.
-        k: number of steps to use the same mask.
-        p: probability of an element to be zeroed. Default: 0.5
-    """
-
-    def __init__(self, n_masks: int, k: int, p: float=0.5):
-        super(RRKDropout, self).__init__()
-        self.n_masks = n_masks
-        self.k = k
-        self.p = p
-        self.uses = 0
-        self.generator = torch.Generator()
-        self.mask_seeds = [self.generator.seed() for _ in range(n_masks)]
-        self.mask_idx = -1
-
-    def forward(self, x: Tensor) -> Tensor:
-        if self.training:
-            if self.uses % self.k == 0:  # rotate mask every k steps
-                self.mask_index = (self.mask_idx + 1) % self.n_masks
-            self.generator.manual_seed(self.mask_seeds[self.mask_index])
-            self.uses += 1
-
-            mask = (torch.rand(x.shape, generator=self.generator) > self.p).to(x.device)
-            return mask * x * (1.0 / (1 - self.p))  # mask and scale
-        return x
-
-    def extra_repr(self) -> str:
-        return f'p={self.p}, n_masks={self.n_masks}, k={self.k}'
-'''
+        return f"p={self.p}, pool_size={self.pool_size}, m={self.m}, cache_masks={self.cache_masks}, input_dim={self.input_dim}"
