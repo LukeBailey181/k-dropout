@@ -6,45 +6,61 @@ import numpy as np
 
 from k_dropout.modules import SequentialKDropout, PoolKDropout
 
+TRIALS = 100
+ARRAY_SIZE = 1_000_000
+RTOL = 0.01
+
+DEVICES = ["cpu"] + ["cuda"] if torch.cuda.is_available() else []
+
+PS = [0, 0.25, 0.5, 0.75]
+KS = [1, 2, 3, 5]
+POOL_SIZES = [1, 2, 3, 5]
+
+PERF_N_TRIALS = 10_000
+PERF_INPUT_SIZE = 100_000
+
 
 if __name__ == "__main__":
-    trials = 100
-    array_size = 1_000_000
-    devices = ["cpu"] + ["cuda"] if torch.cuda.is_available() else []
-    rtol = 0.01
-
     # test correctness
     # sequential k-dropout
-    ps = [0, 0.25, 0.5, 0.75]
-    ks = [1, 2, 3, 5]
-    for device in devices:
-        for k in ks:
-            for p in ps:
+    for device in DEVICES:
+        for k in KS:
+            for p in PS:
                 skd = SequentialKDropout(k=k, p=p)
                 print(f"SequentialKDropout: device={device} k={k} p={p}")
-                for t in range(trials):
-                    x = torch.ones((array_size,), device=device)
+                for t in range(TRIALS):
+                    x = torch.ones(
+                        (
+                            1,
+                            ARRAY_SIZE,
+                        ),
+                        device=device,
+                    )
                     out = skd(x).cpu()
-                    p_out = 1 - ((out != 0).sum().item() / array_size)
+                    p_out = 1 - ((out != 0).sum().item() / ARRAY_SIZE)
                     if t % k == 0:
                         mask = out != 0
 
-                    assert np.isclose(p, p_out, rtol=rtol)  # p correct
+                    assert np.isclose(p, p_out, rtol=RTOL)  # p correct
                     assert np.isclose(out.max().item(), 1 / (1 - p))  # scaling correct
 
     # pool k-dropout
-    ps = [0, 0.25, 0.5, 0.75]
-    n_masks = [1, 2, 3, 5]
-    for device in devices:
-        for n_mask in n_masks:
-            for p in ps:
-                skd = PoolKDropout(n_masks=n_mask, p=p)
-                print(f"PoolKDropout: device={device} n_masks={n_mask} p={p}")
+    for device in DEVICES:
+        for pool_size in POOL_SIZES:
+            for p in PS:
+                skd = PoolKDropout(pool_size=pool_size, p=p)
+                print(f"PoolKDropout: device={device} pool_size={pool_size} p={p}")
                 masks = []
-                for t in range(trials):
-                    x = torch.ones((array_size,), device=device)
+                for t in range(TRIALS):
+                    x = torch.ones(
+                        (
+                            1,
+                            ARRAY_SIZE,
+                        ),
+                        device=device,
+                    )
                     out = skd(x).cpu()
-                    p_out = 1 - ((out != 0).sum().item() / array_size)
+                    p_out = 1 - ((out != 0).sum().item() / ARRAY_SIZE)
                     mask = out != 0
                     for m in masks:
                         if (m == mask).all().item():
@@ -52,34 +68,35 @@ if __name__ == "__main__":
                     else:
                         masks.append(mask)
 
-                    assert np.isclose(p, p_out, rtol=rtol)  # p correct
+                    assert np.isclose(p, p_out, rtol=RTOL)  # p correct
                     assert np.isclose(out.max().item(), 1 / (1 - p))  # scaling correct
                 # mask pool correct
                 if p == 0:
                     assert len(masks) == 1
                 else:
-                    assert len(masks) == n_mask
-
-    # TODO: test the batch mask share parameter
+                    assert len(masks) == pool_size
 
     # test performance
     # NOTE: we expect nn.Dropout to outperform our layer, we just need this gap
     #       to not be worse on the gpu
-    input_size = 100_000
-    n_trials = 10_000
-
     layers = [
         nn.Dropout(p=0.5),
         SequentialKDropout(k=10, p=0.5),
-        PoolKDropout(n_masks=100, p=0.5),
+        PoolKDropout(pool_size=100, p=0.5),
     ]
 
-    for device in devices:
-        input = torch.randn((input_size,), device=device)
+    for device in DEVICES:
+        input = torch.randn(
+            (
+                1,
+                PERF_INPUT_SIZE,
+            ),
+            device=device,
+        )
         for layer in layers:
             start_time = time.perf_counter()
 
-            for _ in range(n_trials):
+            for _ in range(PERF_N_TRIALS):
                 out = layer(input)
 
             print(f"{layer}, device={device}: {time.perf_counter() - start_time:.2f}s")

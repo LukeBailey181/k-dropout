@@ -27,7 +27,6 @@ def get_dropout_layer(
     pool_size: Optional[int] = None,
     masks_per_batch: Optional[int] = None,
 ) -> Tuple[nn.Module, dict]:
-
     kwargs = {"p": p}
     if masks_per_batch is not None:
         kwargs["m"] = masks_per_batch
@@ -44,8 +43,7 @@ def get_dropout_layer(
     elif dropout_layer == "pool":
         if pool_size is None:
             raise ValueError("Must specify pool_size for pool dropout")
-        # TODO change this to be pool size everywhere
-        kwargs["n_masks"] = pool_size
+        kwargs["pool_size"] = pool_size
         return PoolKDropout, kwargs
     else:
         raise ValueError(f"Unknown dropout layer {dropout_layer}")

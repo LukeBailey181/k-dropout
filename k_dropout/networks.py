@@ -78,7 +78,7 @@ def make_pool_kd_net(
     num_classes: int = 10,
     hidden_units: int = 100,
     hidden_layers: int = 2,
-    n_masks: int = 5,
+    pool_size: int = 5,
     p: float = 0.5,
     m: int = -1,
 ) -> nn.Module:
@@ -92,7 +92,7 @@ def make_pool_kd_net(
         dropout_layer=PoolKDropout,
         dropout_kargs={
             "p": p,
-            "n_masks": n_masks,
+            "pool_size": pool_size,
             "m": m,
         },
     )
@@ -112,7 +112,6 @@ def make_standard_net(
 
 
 if __name__ == "__main__":
-
     standard_net = make_standard_net()
     print("STANDARD NET:")
     print(standard_net)
