@@ -10,6 +10,7 @@ else:
     DEVICE = "cpu"
 
 
+# TODO: handle other metrics (from sklearn?)
 def test_net(net, dataset, device=DEVICE):
     """
     Evaulates net on dataset

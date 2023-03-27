@@ -35,7 +35,19 @@ if __name__ == "__main__":
 
         config = vars(args)
         config["git_snapshot"] = snapshot_name
-        run = wandb.init(project="k-dropout", config=config, name=args.run_name)
+        # TODO: specify run name in a more precise way
+        #       e.g. with args.run_name_prefix and args.run_name_items which could
+        #       include the params (p, k, etc..) to put in the run name
+        if args.run_name is None:
+            run_name = f"{args.dataset_name}_{args.dropout_layer}"
+            if args.dropout_layer == "sequential":
+                run_name += f"_k={args.k}_m={args.m}"
+            elif args.dropout_layer == "pool":
+                run_name += f"_size={args.pool_size}_m={args.m}"
+            run_name += f"_p={args.p}_lr={args.lr}_epochs={args.epochs}"
+        else:
+            run_name = args.run_name
+        run = wandb.init(project="k-dropout", config=config, name=run_name)
 
         snapshot_artifact = wandb.Artifact(snapshot_name, type="git_snapshot")
         snapshot_artifact.add_file(snapshot_path)
@@ -68,7 +80,7 @@ if __name__ == "__main__":
         batch_size=args.batch_size,
         test_batch_size=args.test_batch_size,
         num_workers=args.num_workers,
-        preprocess_dataset=args.preprocess_dataset,
+        preprocess_dataset=True,  # TODO: handle this without store_true
         device=args.device,
     )
     print(f"Loaded {args.dataset_name} dataset")
