@@ -29,7 +29,7 @@ if __name__ == "__main__":
     torch.manual_seed(args.seed)
 
     # wandb integration
-    if args.use_wandb:
+    if not args.local_only:
         # log the git diff and untracked files as an artifact
         snapshot_name, snapshot_path = write_git_snapshot()
 
@@ -48,7 +48,7 @@ if __name__ == "__main__":
         k=args.k,
         pool_size=args.pool_size,
         m=args.m,
-        cache_masks=args.cache_masks,
+        cache_masks=True,
         hidden_size=args.hidden_size,
     )
     model = make_net(
@@ -82,5 +82,5 @@ if __name__ == "__main__":
         epochs=args.epochs,
         lr=args.lr,
         device=args.device,
-        use_wandb=args.use_wandb,
+        use_wandb=not args.local_only,
     )

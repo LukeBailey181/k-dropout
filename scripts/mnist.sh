@@ -1,5 +1,7 @@
 #!/bin/bash
 
+conda activate pytorch
+
 # model
 INPUT_DIM=784
 OUTPUT_DIM=10
@@ -17,7 +19,6 @@ KS=(1 5 25 50 100 200 500 1000 2500 1000000)
 for ((RESTART=1; RESTART<=$RESTARTS; RESTART++)); do
     # no dropout
     python train_net.py \
-        --use_wandb \
         --run_name "${RUN_NAME_PREFIX}_nodropout_${RESTART}" \
         --dataset_name mnist \
         --preprocess_dataset \
@@ -33,7 +34,6 @@ for ((RESTART=1; RESTART<=$RESTARTS; RESTART++)); do
     # sequential k dropout
     for K in "${KS[@]}"; do
         python train_net.py \
-            --use_wandb \
             --run_name "${RUN_NAME_PREFIX}_sequential_${K}_${RESTART}" \
             --dataset_name mnist \
             --preprocess_dataset \

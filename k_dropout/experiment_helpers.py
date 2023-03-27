@@ -53,9 +53,6 @@ def get_default_parser():
     parser.add_argument(
         "--pool_size", type=int, help="Number of masks in the pool for pool k dropout"
     )
-    parser.add_argument(
-        "--cache_masks", action="store_true", help="Cache masks for pool k dropout"
-    )
     # dataset
     parser.add_argument(
         "--dataset_name",
@@ -92,9 +89,9 @@ def get_default_parser():
     parser.add_argument("--lr", type=float, default=0.005)
     # experiment
     parser.add_argument(
-        "--use_wandb",
+        "--local_only",
         action="store_true",  # defaults to false
-        help="Whether to log results to weights and biases",
+        help="If true, don't use weights and biases",
     )
     parser.add_argument(
         "--run_name",
@@ -117,7 +114,7 @@ def get_dropout_layer(
     k: Optional[int] = None,
     pool_size: Optional[int] = None,
     m: Optional[int] = None,
-    cache_masks: bool = False,
+    cache_masks: bool = True,
     hidden_size: Optional[int] = None,  # input size for pool dropout with mask caching
 ) -> Tuple[nn.Module, dict]:
     kwargs = {"p": p}
