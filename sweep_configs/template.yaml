@@ -1,0 +1,47 @@
+name: sweep_test
+description: testing the sweep function
+project: k-dropout
+program: train_net.py
+method: grid
+metric:
+  name: test_loss
+  goal: minimize
+# TODO: early_terminate
+parameters:
+  # experiment
+  restarts: # TODO: find a better way to do multiple restarts
+    values: [1,]
+  # model
+  input_size:
+    value: 784
+  hidden_size:
+    value: 1200
+  output_size:
+    value: 10
+  n_hidden:
+    value: 2
+  # dropout
+  dropout_layer:
+    value: sequential
+  p:
+    value: 0.5
+  k:
+    values: [1, 1000, 10000, 1000000]
+  m:
+    value: -1
+  # dataset
+  dataset_name:
+    value: mnist
+  batch_size:
+    value: 512
+  test_batch_size:
+    value: 512
+  num_workers:
+    value: 4
+  # training
+  device: 
+    value: cuda
+  epochs:
+    value: 20
+  lr:
+    value: 0.0005

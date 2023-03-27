@@ -105,6 +105,10 @@ def get_default_parser():
         default=random.randrange(2**32),
         help="Random seed for reproducibility",
     )
+    # TODO: find a better way to do restarts in sweeps
+    parser.add_argument(
+        "--restarts", type=str, help="Placeholder for running multiple sweep restarts"
+    )
     return parser
 
 
