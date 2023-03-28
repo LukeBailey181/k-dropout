@@ -1,0 +1,47 @@
+name: mnist_sequential_sweep_no_pre_drop
+description: Sweeping mnist params with k dropout without input dropout
+project: k-dropout
+program: train_net.py
+method: grid
+metric:
+  name: test_loss
+  goal: minimize
+# TODO: early_terminate
+parameters:
+  # experiment
+  restarts: # TODO: find a better way to do multiple restarts
+    value: 1
+  # model
+  input_size:
+    value: 784
+  hidden_size:
+    value: 1200
+  output_size:
+    value: 10
+  n_hidden:
+    value: 2
+  # dropout
+  dropout_layer:
+    value: sequential
+  p:
+    value: 0.5
+  k:
+    values: [1, 100, 1000, 10000, 100000]
+  m:
+    values: [-1, 1, 32, 64, 128]
+  # dataset
+  dataset_name:
+    value: mnist
+  batch_size:
+    value: 512
+  test_batch_size:
+    value: 512
+  num_workers:
+    value: 4
+  # training
+  device: 
+    value: cuda
+  epochs:
+    value: 200
+  lr:
+    value: 0.0005
