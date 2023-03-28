@@ -63,13 +63,23 @@ if __name__ == "__main__":
         cache_masks=True,
         hidden_size=args.hidden_size,
     )
+
+    if args.input_p is not None:
+        input_dropout_kwargs = dict(layer_kwargs)
+        input_dropout_kwargs["p"] = args.input_p
+        if args.dropout_layer == "pool":
+            input_dropout_kwargs["input_dim"] = args.input_size
+    else:
+        input_dropout_kwargs = None
+
     model = make_net(
         input_size=args.input_size,
         output_size=args.output_size,
         hidden_size=args.hidden_size,
         n_hidden=args.n_hidden,
         dropout_layer=dropout_layer,
-        dropout_kargs=layer_kwargs,
+        dropout_kwargs=layer_kwargs,
+        input_dropout_kwargs=input_dropout_kwargs,
     )
     print(f"Created {args.dropout_layer} model with {args.n_hidden} hidden layers")
     print(model)

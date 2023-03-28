@@ -14,6 +14,7 @@ LR=0.0005
 BATCH_SIZE=512
 
 python train_net.py \
+    --local_only \
     --dataset_name mnist \
     --preprocess_dataset \
     --batch_size $BATCH_SIZE \
@@ -29,6 +30,7 @@ python train_net.py \
     --k 1 
 
 python train_net.py \
+    --local_only \
     --dataset_name mnist \
     --preprocess_dataset \
     --batch_size $BATCH_SIZE \
