@@ -45,6 +45,8 @@ if __name__ == "__main__":
             elif args.dropout_layer == "pool":
                 run_name += f"_size={args.pool_size}_m={args.m}"
             run_name += f"_p={args.p}_lr={args.lr}_epochs={args.epochs}"
+            if args.input_p:
+                run_name += f"_input_p={args.input_p}"
         else:
             run_name = args.run_name
         run = wandb.init(project="k-dropout", config=config, name=run_name)
