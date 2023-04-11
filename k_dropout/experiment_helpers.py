@@ -47,6 +47,9 @@ def get_default_parser():
         type=int,
         help="Number of submasks to include in each batch for k dropout",
     )
+    parser.add_argument(
+        "--input_p", type=float, help="Dropout probability for input features"
+    )
     # sequential k dropout
     parser.add_argument("--k", type=int, help="Mask repeat parameter for k dropout")
     # pool k dropout

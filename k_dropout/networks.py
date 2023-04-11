@@ -11,23 +11,29 @@ def make_net(
     hidden_size: int,
     n_hidden: int,
     dropout_layer: Optional[Any] = None,
-    dropout_kargs: Dict[str, Any] = {},
+    dropout_kwargs: Dict[str, Any] = {},
+    input_dropout_kwargs: Optional[Dict[str, Any]] = None,
 ) -> nn.Module:
     """Helper function for making NNs"""
 
-    input = [
+    input_dropout = []
+    if input_dropout_kwargs is not None and dropout_layer is not None:
+        input_dropout = [dropout_layer(**input_dropout_kwargs)]
+
+    input = input_dropout + [
         nn.Linear(input_size, hidden_size),
         nn.ReLU(),
     ]
+
     if dropout_layer is not None:
-        input.append(dropout_layer(**dropout_kargs))
+        input.append(dropout_layer(**dropout_kwargs))
 
     hidden = []
     for _ in range(n_hidden):
         hidden.append(nn.Linear(hidden_size, hidden_size))
         hidden.append(nn.ReLU())
         if dropout_layer is not None:
-            hidden.append(dropout_layer(**dropout_kargs))
+            hidden.append(dropout_layer(**dropout_kwargs))
 
     output = [nn.Linear(hidden_size, output_size)]
 
@@ -49,7 +55,7 @@ def make_pt_dropoout_net(
         hidden_units,
         hidden_layers,
         dropout_layer=nn.Dropout,
-        dropout_kargs={"p": p},
+        dropout_kwargs={"p": p},
     )
 
 
@@ -70,7 +76,7 @@ def make_skd_net(
         hidden_size=hidden_units,
         n_hidden=hidden_layers,
         dropout_layer=SequentialKDropout,
-        dropout_kargs={"p": p, "k": k, "m": m},
+        dropout_kwargs={"p": p, "k": k, "m": m},
     )
 
 
@@ -91,7 +97,7 @@ def make_pool_kd_net(
         hidden_size=hidden_units,
         n_hidden=hidden_layers,
         dropout_layer=PoolKDropout,
-        dropout_kargs={
+        dropout_kwargs={
             "p": p,
             "pool_size": pool_size,
             "m": m,
