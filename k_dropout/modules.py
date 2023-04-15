@@ -89,6 +89,7 @@ class PoolKDropout(nn.Module):
         self.m = m
         self.cache_masks = cache_masks
         self.input_dim = input_dim
+        self.frozen_mask_idx = None
 
         if self.cache_masks:
             if self.input_dim is None:
@@ -102,10 +103,38 @@ class PoolKDropout(nn.Module):
             g = torch.Generator()
             self.mask_seeds = [g.seed() for _ in range(pool_size)]
 
+    def freeze_mask(self, mask_idx: int) -> None: 
+        """Freeze mask to be one corresponding to mask_idx for training 
+        and inference
+        """
+        if mask_idx >= self.pool_size:
+            raise ValueError(f"mask_idx value of {mask_idx} not valid for pool size of {self.pool_size}")
+        self.frozen_mask_idx = mask_idx        
+
+    def unfreeze_mask(self) -> None:
+        self.frozen_mask_idx = None
+
     def forward(self, x: Tensor) -> Tensor:
         if x.dim() != 2:
             raise ValueError(f"Input must be of shape (batch_size, d), got {x.shape}")
         batch_size, d = x.shape
+
+        if self.frozen_mask_idx is not None:
+            # Use frozen_mask_idx if in training or not
+
+            if self.cache_masks:
+                mask = self.mask_pool[self.frozen_mask_idx]
+            else:
+                g = torch.Generator(device=x.device)
+                gen_seed = self.mask_seeds[self.frozen_mask_idx]
+                g.manual_seed(gen_seed)
+                mask = (
+                    torch.rand(d, device=x.device, generator=g) >= self.p
+                )
+
+            batch_mask = mask.repeat(batch_size, 1)
+            return (1.0 / (1 - self.p)) * (batch_mask * x)  # mask and scale
+
 
         # Check m divides batch size
         if self.m > 0 and batch_size % self.m != 0:
@@ -141,3 +170,27 @@ class PoolKDropout(nn.Module):
 
     def extra_repr(self) -> str:
         return f"p={self.p}, pool_size={self.pool_size}, m={self.m}, cache_masks={self.cache_masks}, input_dim={self.input_dim}"
+
+if __name__ == "__main__":
+    # Test
+    batch_size = 8
+    features = 4
+    dummy_batch = torch.rand((batch_size, features))
+
+    for cache_masks in [True, False]:
+        print(f"cache_masks := {cache_masks}")
+
+        pool_dropout = PoolKDropout(pool_size=2, m=batch_size, p=0.5, cache_masks=cache_masks, input_dim=features)
+        pool_dropout.freeze_mask(0)
+        pool_dropout.eval()
+
+        print("Input:")
+        print(dummy_batch)
+        print("Frozen mask output:")
+        print(pool_dropout(dummy_batch))
+
+        pool_dropout.unfreeze_mask() 
+        pool_dropout.train()
+
+        print("Unfrozen mask train output:")
+        print(pool_dropout(dummy_batch))
