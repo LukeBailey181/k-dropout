@@ -1,7 +1,50 @@
 from torch import nn
 from typing import Dict, Optional, Any
 
-from k_dropout.modules import SequentialKDropout, PoolKDropout
+# from k_dropout.modules import SequentialKDropout, PoolKDropout
+from modules import SequentialKDropout, PoolKDropout
+
+
+class PoolDropoutLensNet(nn.Module):
+    def __init__(
+        self,
+        input_dim: int,
+        num_classes: int,
+        hidden_units: int,
+        hidden_layers: int,
+        pool_size: int,
+        p: float,
+        m: int,
+    ):
+
+        super().__init__()
+
+        self.net = make_pool_kd_net(
+            input_dim=input_dim,
+            num_classes=num_classes,
+            hidden_units=hidden_units,
+            hidden_layers=hidden_layers,
+            pool_size=pool_size,
+            p=p,
+            m=m,
+        )
+
+        return
+
+    def freeze_mask(self, mask_idx):
+
+        for layer in self.net:
+            if isinstance(layer, PoolKDropout):
+                layer.freeze_mask(mask_idx)
+
+    def unfreeze_mask(self):
+
+        for layer in self.net:
+            if isinstance(layer, PoolKDropout):
+                layer.unfreeze_mask()
+
+    def forward(self, x):
+        return self.net(x)
 
 
 # TODO: add option for dropout on the input layer
