@@ -13,20 +13,20 @@ EPOCHS=1
 LR=0.0005
 BATCH_SIZE=512
 
-#python train_net.py \
-#    --dataset_name mnist \
-#    --preprocess_dataset \
-#    --batch_size $BATCH_SIZE \
-#    --input_size $INPUT_DIM \
-#    --hidden_size $HIDDEN_SIZE \
-#    --output_size $OUTPUT_DIM \
-#    --n_hidden $N_HIDDEN \
-#    --epochs $EPOCHS \
-#    --lr $LR \
-#    --dropout_layer sequential \
-#    --masks_per_batch 2 \
-#    --num_workers 0 \
-#    --k 1 
+python train_net.py \
+    --dataset_name mnist \
+    --preprocess_dataset \
+    --batch_size $BATCH_SIZE \
+    --input_size $INPUT_DIM \
+    --hidden_size $HIDDEN_SIZE \
+    --output_size $OUTPUT_DIM \
+    --n_hidden $N_HIDDEN \
+    --epochs $EPOCHS \
+    --lr $LR \
+    --dropout_layer sequential \
+    --masks_per_batch 2 \
+    --num_workers 0 \
+    --k 1 
 
 python train_net.py \
     --dataset_name mnist \
@@ -39,6 +39,7 @@ python train_net.py \
     --epochs $EPOCHS \
     --lr $LR \
     --dropout_layer pool \
+    --local_only \
     --m 2 \
     --num_workers 0 \
     --pool_size 100 \

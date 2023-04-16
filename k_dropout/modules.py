@@ -187,7 +187,7 @@ class PoolKDropout(nn.Module):
         return x
 
     def extra_repr(self) -> str:
-        return f"p={self.p}, pool_size={self.pool_size}, m={self.m}, cache_masks={self.cache_masks}, input_dim={self.input_dim}"
+        return f"p={self.p}, pool_size={self.pool_size}, m={self.m}, cache_masks={self.cache_masks}, input_dim={self.input_dim}, sync_over_model={self.sync_over_model}"
 
 
 if __name__ == "__main__":
