@@ -61,6 +61,7 @@ if __name__ == "__main__":
         p=args.p,
         k=args.k,
         pool_size=args.pool_size,
+        sync_over_model=args.sync_over_model,
         m=args.m,
         cache_masks=True,
         hidden_size=args.hidden_size,

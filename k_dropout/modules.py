@@ -1,5 +1,6 @@
 import torch
 from torch import nn, Tensor
+from typing import Optional
 
 
 class SequentialKDropout(nn.Module):
@@ -81,7 +82,8 @@ class PoolKDropout(nn.Module):
         p: float = 0.5,
         m: int = -1,
         cache_masks: bool = False,
-        input_dim: int = None,
+        input_dim: Optional[int] = None,
+        sync_over_model: bool = False,
     ):
         super(PoolKDropout, self).__init__()
         self.pool_size = pool_size
@@ -90,6 +92,8 @@ class PoolKDropout(nn.Module):
         self.cache_masks = cache_masks
         self.input_dim = input_dim
         self.frozen_mask_idx = None
+        self.num_training_passes = 0
+        self.sync_over_model = sync_over_model
 
         if self.cache_masks:
             if self.input_dim is None:
@@ -142,12 +146,27 @@ class PoolKDropout(nn.Module):
             )
 
         if self.training:
+
+            self.num_training_passes += 1
+
             # sample mask indices
             g = torch.Generator(device=x.device)
             masks_per_batch = self.m if self.m > 0 else batch_size
-            seed_idxs = torch.randint(
-                high=self.pool_size, size=(masks_per_batch,), device=x.device
-            )
+
+            if self.sync_over_model:
+                g.manual_seed(self.num_training_passes)
+                seed_idxs = torch.randint(
+                    high=self.pool_size,
+                    size=(masks_per_batch,),
+                    device=x.device,
+                    generator=g,
+                )
+            else:
+                seed_idxs = torch.randint(
+                    high=self.pool_size,
+                    size=(masks_per_batch,),
+                    device=x.device,
+                )
 
             # generate batch mask
             if self.cache_masks:

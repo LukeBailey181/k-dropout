@@ -42,6 +42,7 @@ python train_net.py \
     --epochs $EPOCHS \
     --lr $LR \
     --p $P \
-    --dropout_layer standard \
+    --sync_over_model \
+    --dropout_layer pool \
     --num_workers 4 \
     --run_name {$STANDARD_RUN}  

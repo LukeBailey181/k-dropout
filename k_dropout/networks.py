@@ -1,8 +1,10 @@
 from torch import nn
+import torch
 from typing import Dict, Optional, Any
+import math
 
-# from k_dropout.modules import SequentialKDropout, PoolKDropout
-from modules import SequentialKDropout, PoolKDropout
+from k_dropout.modules import SequentialKDropout, PoolKDropout
+#from modules import SequentialKDropout, PoolKDropout
 
 
 class PoolDropoutLensNet(nn.Module):
@@ -42,6 +44,19 @@ class PoolDropoutLensNet(nn.Module):
         for layer in self.net:
             if isinstance(layer, PoolKDropout):
                 layer.unfreeze_mask()
+
+    @torch.no_grad()
+    def reset_weights(self):
+
+        for layer in self.net:
+            if isinstance(layer, nn.Linear):
+                # Reinit weights using same code as nn.Linear source
+                # at https://github.com/pytorch/pytorch/blob/master/torch/nn/modules/linear.py
+                nn.init.kaiming_uniform_(layer.weight.data, a=math.sqrt(5))
+                if layer.bias is not None:
+                    fan_in, _ = nn.init._calculate_fan_in_and_fan_out(self.weight)
+                    bound = 1 / math.sqrt(fan_in) if fan_in > 0 else 0
+                    init.uniform_(layer.bias, -bound, bound)
 
     def forward(self, x):
         return self.net(x)
