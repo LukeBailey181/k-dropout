@@ -1,0 +1,53 @@
+name: cifar_pool_sync_over_model_dropout
+description: Test cifar pooled dropout using sync across model
+project: k-dropout
+program: train_net.py
+method: grid
+metric:
+  name: test_loss
+  goal: minimize
+# TODO: early_terminate
+command:
+  - ${env}
+  - ${interpreter}
+  - ${program}
+  - ${args}
+  - --sync_over_model
+parameters:
+  # experiment
+  restarts: # TODO: find a better way to do multiple restarts
+    value: 1
+  # model
+  input_size:
+    value: 3072
+  hidden_size:
+    value: 2000
+  output_size:
+    value: 10
+  n_hidden:
+    value: 2
+  # dropout
+  dropout_layer:
+    value: pool
+  p:
+    value: 0.5
+  pool_size:
+    values: [1, 100, 1000, 10000, 100000, 1000000, 20000000]
+  m:
+    values: [1, 128, 512]
+  # dataset
+  dataset_name:
+    value: cifar10
+  batch_size:
+    value: 512
+  test_batch_size:
+    value: 512
+  num_workers:
+    value: 4
+  # training
+  device: 
+    value: cuda
+  epochs:
+    value: 300
+  lr:
+    value: 0.0005
