@@ -29,6 +29,7 @@ class PoolDropoutLensNet(nn.Module):
             pool_size=pool_size,
             p=p,
             m=m,
+            sync_over_model=True
         )
 
         return
@@ -56,7 +57,7 @@ class PoolDropoutLensNet(nn.Module):
                 if layer.bias is not None:
                     fan_in, _ = nn.init._calculate_fan_in_and_fan_out(self.weight)
                     bound = 1 / math.sqrt(fan_in) if fan_in > 0 else 0
-                    init.uniform_(layer.bias, -bound, bound)
+                    nn.init.uniform_(layer.bias, -bound, bound)
 
     def forward(self, x):
         return self.net(x)
@@ -146,6 +147,7 @@ def make_pool_kd_net(
     pool_size: int = 5,
     p: float = 0.5,
     m: int = -1,
+    sync_over_model: bool = False,
 ) -> nn.Module:
     """Return a NN that uses PoolKDropout"""
 
@@ -161,6 +163,7 @@ def make_pool_kd_net(
             "m": m,
             "cache_masks": True,
             "input_dim": hidden_units,
+            "sync_over_model" : sync_over_model
         },
     )
 
