@@ -56,6 +56,11 @@ def get_default_parser():
     parser.add_argument(
         "--pool_size", type=int, help="Number of masks in the pool for pool k dropout"
     )
+    parser.add_argument(
+        "--sync_over_model", 
+        action="store_true",  # defaults to false 
+        help="Synchronize masks ascross model"
+    )
     # dataset
     parser.add_argument(
         "--dataset_name",
@@ -120,6 +125,7 @@ def get_dropout_layer(
     p: float,
     k: Optional[int] = None,
     pool_size: Optional[int] = None,
+    sync_over_model: bool = False,
     m: Optional[int] = None,
     cache_masks: bool = True,
     hidden_size: Optional[int] = None,  # input size for pool dropout with mask caching
@@ -142,6 +148,7 @@ def get_dropout_layer(
             raise ValueError("Must specify pool_size for pool dropout")
         kwargs["pool_size"] = pool_size
         kwargs["cache_masks"] = cache_masks
+        kwargs["sync_over_model"] = sync_over_model
         if cache_masks:
             kwargs["input_dim"] = hidden_size
         return PoolKDropout, kwargs

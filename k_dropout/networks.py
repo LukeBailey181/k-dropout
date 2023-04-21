@@ -1,7 +1,66 @@
 from torch import nn
+import torch
 from typing import Dict, Optional, Any
+import math
 
 from k_dropout.modules import SequentialKDropout, PoolKDropout
+#from modules import SequentialKDropout, PoolKDropout
+
+
+class PoolDropoutLensNet(nn.Module):
+    def __init__(
+        self,
+        input_dim: int,
+        num_classes: int,
+        hidden_units: int,
+        hidden_layers: int,
+        pool_size: int,
+        p: float,
+        m: int,
+    ):
+
+        super().__init__()
+
+        self.net = make_pool_kd_net(
+            input_dim=input_dim,
+            num_classes=num_classes,
+            hidden_units=hidden_units,
+            hidden_layers=hidden_layers,
+            pool_size=pool_size,
+            p=p,
+            m=m,
+            sync_over_model=True
+        )
+
+        return
+
+    def freeze_mask(self, mask_idx):
+
+        for layer in self.net:
+            if isinstance(layer, PoolKDropout):
+                layer.freeze_mask(mask_idx)
+
+    def unfreeze_mask(self):
+
+        for layer in self.net:
+            if isinstance(layer, PoolKDropout):
+                layer.unfreeze_mask()
+
+    @torch.no_grad()
+    def reset_weights(self):
+
+        for layer in self.net:
+            if isinstance(layer, nn.Linear):
+                # Reinit weights using same code as nn.Linear source
+                # at https://github.com/pytorch/pytorch/blob/master/torch/nn/modules/linear.py
+                nn.init.kaiming_uniform_(layer.weight.data, a=math.sqrt(5))
+                if layer.bias is not None:
+                    fan_in, _ = nn.init._calculate_fan_in_and_fan_out(self.weight)
+                    bound = 1 / math.sqrt(fan_in) if fan_in > 0 else 0
+                    nn.init.uniform_(layer.bias, -bound, bound)
+
+    def forward(self, x):
+        return self.net(x)
 
 
 # TODO: add option for dropout on the input layer
@@ -88,6 +147,7 @@ def make_pool_kd_net(
     pool_size: int = 5,
     p: float = 0.5,
     m: int = -1,
+    sync_over_model: bool = False,
 ) -> nn.Module:
     """Return a NN that uses PoolKDropout"""
 
@@ -103,6 +163,7 @@ def make_pool_kd_net(
             "m": m,
             "cache_masks": True,
             "input_dim": hidden_units,
+            "sync_over_model" : sync_over_model
         },
     )
 
