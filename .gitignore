@@ -1,3 +1,7 @@
+# MacOS nonsense
+.DS_Store
+
+# wanb
 artifacts/
 wandb/
 
