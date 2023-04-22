@@ -31,6 +31,7 @@ if __name__ == "__main__":
     # wandb integration
     if not args.local_only:
         # log the git diff and untracked files as an artifact
+        
         snapshot_name, snapshot_path = write_git_snapshot()
 
         config = vars(args)
@@ -108,5 +109,5 @@ if __name__ == "__main__":
     )
 
     if args.model_save_path is not None:
-        # Save trained model
+        # Save trained model 
         torch.save(model, args.model_save_path)

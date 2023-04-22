@@ -8,7 +8,6 @@ try:
 except ModuleNotFoundError:
     from modules import SequentialKDropout, PoolKDropout
 
-
 import torch.nn as nn
 
 # from modules import SequentialKDropout, PoolKDropout
