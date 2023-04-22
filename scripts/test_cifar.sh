@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # model
-INPUT_DIM=$((1*32*32))
+INPUT_DIM=$((3*32*32))
 OUTPUT_DIM=10
 HIDDEN_SIZE=1200
 N_HIDDEN=2
@@ -17,7 +17,6 @@ BATCH_SIZE=512
 
 python train_net.py \
     --dataset_name cifar10 \
-    --local_only \
     --preprocess_dataset \
     --batch_size $BATCH_SIZE \
     --input_size $INPUT_DIM \
@@ -35,7 +34,6 @@ python train_net.py \
 python train_net.py \
     --dataset_name cifar10 \
     --preprocess_dataset \
-    --local_only \
     --batch_size $BATCH_SIZE \
     --input_size $INPUT_DIM \
     --hidden_size $HIDDEN_SIZE \
@@ -46,5 +44,6 @@ python train_net.py \
     --p $P \
     --sync_over_model \
     --dropout_layer pool \
+    --pool_size 1\
     --num_workers 4 \
     --run_name {$STANDARD_RUN}  

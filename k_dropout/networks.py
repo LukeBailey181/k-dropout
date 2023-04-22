@@ -5,35 +5,83 @@ import math
 
 from k_dropout.modules import SequentialKDropout, PoolKDropout
 
+import torch.nn as nn
+
 # from modules import SequentialKDropout, PoolKDropout
 
 
 class PoolDropoutLensNet(nn.Module):
     def __init__(
         self,
-        input_dim: int,
-        num_classes: int,
-        hidden_units: int,
-        hidden_layers: int,
-        pool_size: int,
-        p: float,
-        m: int,
+        input_dim: Optional[int] = None,
+        num_classes: Optional[int] = None,
+        hidden_units: Optional[int] = None,
+        hidden_layers: Optional[int] = None,
+        pool_size: Optional[int] = None,
+        p: Optional[float] = None,
+        m: Optional[int] = None,
+        init_net: Optional[nn.Sequential] = None, 
     ):
+        """
+        Args:
+            input_dim: dataset input dim 
+            num_classes: dataset num classes 
+            hidden_units: number of hidden units for net
+            hidden_layers: number of hidden layers for net
+            pool_size: dropout pool size for net
+            p: probability of dropout for all dropout layers of net
+            m: number of dropout masks per batch
+            init_net: if not none, then this is used for self.net instead
+                of initializing a new net from the above arguments. This 
+                should be an MLP with only pooled dropout layers.
+        """
 
         super().__init__()
 
-        self.net = make_pool_kd_net(
-            input_dim=input_dim,
-            num_classes=num_classes,
-            hidden_units=hidden_units,
-            hidden_layers=hidden_layers,
-            pool_size=pool_size,
-            p=p,
-            m=m,
-            sync_over_model=True,
-        )
+        if init_net is not None:
+            self.net = init_net
+        else:
+            self.net = make_pool_kd_net(
+                input_dim=input_dim,
+                num_classes=num_classes,
+                hidden_units=hidden_units,
+                hidden_layers=hidden_layers,
+                pool_size=pool_size,
+                p=p,
+                m=m,
+                sync_over_model=True,
+            )
+
+        # Used when sampling random subnets
+        self.using_random_masking = False
+        self.pooled_dropout_layers = [layer for layer in self.net if isinstance(layer, PoolKDropout)]
+        self.p = self.pooled_dropout_layers[-1].p
 
         return
+
+    def activate_random_masking(self):
+
+        if self.using_random_masking:
+            return
+        self.using_random_masking = True
+
+        # Create a new random mask and freeze this
+        for layer_idx in range(len(self.net)):
+            if isinstance(self.net[layer_idx], PoolKDropout):
+                self.net[layer_idx] = nn.Dropout(p=self.p)
+
+    def deactivate_random_masking(self):
+
+        if not self.using_random_masking:
+            return
+        self.using_random_masking = False
+
+        # Create a new random mask and freeze this
+        pooled_droout_idx = 0
+        for layer_idx in range(len(self.net)):
+            if isinstance(self.net[layer_idx], PoolKDropout):
+                self.net[layer_idx] = self.pooled_dropout_layers[pooled_droout_idx]
+                pooled_droout_idx += 1
 
     def freeze_mask(self, mask_idx):
 
