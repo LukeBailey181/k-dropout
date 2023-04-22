@@ -4,7 +4,8 @@ from typing import Dict, Optional, Any
 import math
 
 from k_dropout.modules import SequentialKDropout, PoolKDropout
-#from modules import SequentialKDropout, PoolKDropout
+
+# from modules import SequentialKDropout, PoolKDropout
 
 
 class PoolDropoutLensNet(nn.Module):
@@ -29,7 +30,7 @@ class PoolDropoutLensNet(nn.Module):
             pool_size=pool_size,
             p=p,
             m=m,
-            sync_over_model=True
+            sync_over_model=True,
         )
 
         return
@@ -163,7 +164,7 @@ def make_pool_kd_net(
             "m": m,
             "cache_masks": True,
             "input_dim": hidden_units,
-            "sync_over_model" : sync_over_model
+            "sync_over_model": sync_over_model,
         },
     )
 
