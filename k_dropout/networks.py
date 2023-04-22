@@ -10,6 +10,8 @@ except ModuleNotFoundError:
 
 import torch.nn as nn
 
+import torch.nn as nn
+
 # from modules import SequentialKDropout, PoolKDropout
 
 
@@ -27,8 +29,8 @@ class PoolDropoutLensNet(nn.Module):
     ):
         """
         Args:
-            input_dim: dataset input dim
-            num_classes: dataset num classes
+            input_dim: dataset input dim 
+            num_classes: dataset num classes 
             hidden_units: number of hidden units for net
             hidden_layers: number of hidden layers for net
             pool_size: dropout pool size for net
@@ -79,9 +81,10 @@ class PoolDropoutLensNet(nn.Module):
             return
         self.using_random_masking = False
 
+        # Create a new random mask and freeze this
         pooled_droout_idx = 0
         for layer_idx in range(len(self.net)):
-            if isinstance(self.net[layer_idx], nn.Dropout):
+            if isinstance(self.net[layer_idx], PoolKDropout):
                 self.net[layer_idx] = self.pooled_dropout_layers[pooled_droout_idx]
                 pooled_droout_idx += 1
 

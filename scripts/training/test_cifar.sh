@@ -17,7 +17,6 @@ BATCH_SIZE=512
 
 python train_net.py \
     --dataset_name cifar10 \
-    --local_only \
     --preprocess_dataset \
     --batch_size $BATCH_SIZE \
     --input_size $INPUT_DIM \
@@ -35,7 +34,6 @@ python train_net.py \
 python train_net.py \
     --dataset_name cifar10 \
     --preprocess_dataset \
-    --local_only \
     --batch_size $BATCH_SIZE \
     --input_size $INPUT_DIM \
     --hidden_size $HIDDEN_SIZE \
