@@ -32,7 +32,7 @@ if __name__ == "__main__":
     if not args.local_only:
         # log the git diff and untracked files as an artifact
         
-        snapshot_name, snapshot_path = write_git_snapshot()
+        #snapshot_name, snapshot_path = write_git_snapshot()
 
         config = vars(args)
         config["git_snapshot"] = snapshot_name
