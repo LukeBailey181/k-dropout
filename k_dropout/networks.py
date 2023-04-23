@@ -81,7 +81,6 @@ class PoolDropoutLensNet(nn.Module):
             return
         self.using_random_masking = False
 
-        # Create a new random mask and freeze this
         pooled_droout_idx = 0
         for layer_idx in range(len(self.net)):
             if isinstance(self.net[layer_idx], PoolKDropout):
@@ -94,6 +93,9 @@ class PoolDropoutLensNet(nn.Module):
                 "Unable to freeze mask as currently using random masking."
             )
 
+        if self.using_random_masking:
+            raise RuntimeError("Unable to freeze mask as currently using random masking.")
+
         for layer in self.net:
             if isinstance(layer, PoolKDropout):
                 layer.freeze_mask(mask_idx)
@@ -103,6 +105,9 @@ class PoolDropoutLensNet(nn.Module):
             raise RuntimeError(
                 "Unable to unfreeze mask as currently using random masking."
             )
+
+        if self.using_random_masking:
+            raise RuntimeError("Unable to unfreeze mask as currently using random masking.")
 
         for layer in self.net:
             if isinstance(layer, PoolKDropout):
