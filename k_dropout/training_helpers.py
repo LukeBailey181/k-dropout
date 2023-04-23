@@ -11,15 +11,25 @@ else:
 
 
 # TODO: handle other metrics (from sklearn?)
-def test_net(net, dataset, device=DEVICE):
+def test_net(net, dataset, device=DEVICE, eval_net=True):
     """
     Evaulates net on dataset
+
+    Arguments:
+        net: network to test
+        dataset: dataset to test net on
+        device: device to move net and data to, e.g. 'cuda'
+        eval_net: true if you want 'net.eval()' to be run. If not, the 
+            net mode (train or eval) is unchaged. Used if you want to 
+            keep a net with dropout in in training mode to evaluate a 
+            subnet performance.
     """
 
     criterion = nn.CrossEntropyLoss()
 
     net.to(device)
-    net.eval()
+    if eval_net:
+        net.eval()
 
     total_loss = total_correct = total_examples = 0
     with torch.no_grad():
