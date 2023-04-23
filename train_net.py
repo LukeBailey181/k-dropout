@@ -32,10 +32,10 @@ if __name__ == "__main__":
     if not args.local_only:
         # log the git diff and untracked files as an artifact
         
-        snapshot_name, snapshot_path = write_git_snapshot()
+        #snapshot_name, snapshot_path = write_git_snapshot()
 
         config = vars(args)
-        config["git_snapshot"] = snapshot_name
+        #config["git_snapshot"] = snapshot_name
         # TODO: specify run name in a more precise way
         #       e.g. with args.run_name_prefix and args.run_name_items which could
         #       include the params (p, k, etc..) to put in the run name
@@ -52,9 +52,10 @@ if __name__ == "__main__":
             run_name = args.run_name
         run = wandb.init(project="k-dropout", config=config, name=run_name)
 
-        snapshot_artifact = wandb.Artifact(snapshot_name, type="git_snapshot")
-        snapshot_artifact.add_file(snapshot_path)
-        wandb.log_artifact(snapshot_artifact)
+        # TODO fix artifact logging
+        #snapshot_artifact = wandb.Artifact(snapshot_name, type="git_snapshot")
+        #snapshot_artifact.add_file(snapshot_path)
+        #wandb.log_artifact(snapshot_artifact)
 
     # create model
     dropout_layer, layer_kwargs = get_dropout_layer(
