@@ -78,7 +78,7 @@ class PoolDropoutLensNet(nn.Module):
 
         pooled_droout_idx = 0
         for layer_idx in range(len(self.net)):
-            if isinstance(self.net[layer_idx], PoolKDropout):
+            if isinstance(self.net[layer_idx], nn.Dropout):
                 self.net[layer_idx] = self.pooled_dropout_layers[pooled_droout_idx]
                 pooled_droout_idx += 1
 
@@ -115,6 +115,9 @@ class PoolDropoutLensNet(nn.Module):
 
     def forward(self, x):
         return self.net(x)
+
+    def __repr__(self):
+        return f"{self.net}"
 
 
 # TODO: add option for dropout on the input layer
@@ -234,6 +237,18 @@ def make_standard_net(
         input_dim, num_classes, hidden_units, hidden_layers, dropout_layer=None
     )
 
+def test_pool_lens_net():
+
+    net = make_pool_kd_net(p=0.2)
+    lens_net = PoolDropoutLensNet(init_net=net)
+    print("LENS NET REGULAR")
+    print(lens_net)
+    lens_net.activate_random_masking()
+    print("LENS NET RANDOM MASKING")
+    print(lens_net)
+    lens_net.deactivate_random_masking()
+    print("LENS NET RETURN TO REGULAR")
+    print(lens_net)
 
 if __name__ == "__main__":
     standard_net = make_standard_net()
@@ -251,3 +266,5 @@ if __name__ == "__main__":
     pool_kd_net = make_pool_kd_net()
     print("POOL K DROPOUT NET:")
     print(pool_kd_net)
+
+    test_pool_lens_net()
