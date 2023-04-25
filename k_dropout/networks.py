@@ -3,7 +3,11 @@ import torch
 from typing import Dict, Optional, Any
 import math
 
-from k_dropout.modules import SequentialKDropout, PoolKDropout
+try:
+    from k_dropout.modules import SequentialKDropout, PoolKDropout
+except ModuleNotFoundError:
+    from modules import SequentialKDropout, PoolKDropout
+
 
 import torch.nn as nn
 

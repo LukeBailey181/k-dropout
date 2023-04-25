@@ -5,8 +5,12 @@ from typing import Optional, Tuple
 import torch
 import torch.nn as nn
 
-from k_dropout.datasets import get_mnist, get_cifar10, process_dataset
-from k_dropout.modules import SequentialKDropout, PoolKDropout
+try:
+    from k_dropout.datasets import get_mnist, get_cifar10, process_dataset
+    from k_dropout.modules import SequentialKDropout, PoolKDropout
+except ModuleNotFoundError:
+    from datasets import get_mnist, get_cifar10, process_dataset
+    from modules import SequentialKDropout, PoolKDropout
 
 
 DATASETS = ("mnist", "cifar10")
