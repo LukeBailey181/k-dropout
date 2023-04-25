@@ -10,8 +10,6 @@ except ModuleNotFoundError:
 
 import torch.nn as nn
 
-import torch.nn as nn
-
 # from modules import SequentialKDropout, PoolKDropout
 
 
