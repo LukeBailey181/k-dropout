@@ -1,4 +1,4 @@
-name: cifar_standard_dropout
+name: cifar_standard_dropout_282_seed
 description: Sweeping cifar p with standard dropout 
 project: k-dropout
 program: train_net.py
@@ -28,6 +28,8 @@ parameters:
   p:
     values: [0, 0.2, 0.5, 0.8]
   # dataset
+  seed:
+    value: 282
   dataset_name:
     value: cifar10
   batch_size:

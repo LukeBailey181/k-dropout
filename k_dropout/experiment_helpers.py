@@ -5,8 +5,12 @@ from typing import Optional, Tuple
 import torch
 import torch.nn as nn
 
-from k_dropout.datasets import get_mnist, get_cifar10, process_dataset
-from k_dropout.modules import SequentialKDropout, PoolKDropout
+try:
+    from k_dropout.datasets import get_mnist, get_cifar10, process_dataset
+    from k_dropout.modules import SequentialKDropout, PoolKDropout
+except ModuleNotFoundError:
+    from datasets import get_mnist, get_cifar10, process_dataset
+    from modules import SequentialKDropout, PoolKDropout
 
 
 DATASETS = ("mnist", "cifar10")
@@ -57,9 +61,9 @@ def get_default_parser():
         "--pool_size", type=int, help="Number of masks in the pool for pool k dropout"
     )
     parser.add_argument(
-        "--sync_over_model", 
-        action="store_true",  # defaults to false 
-        help="Synchronize masks ascross model"
+        "--sync_over_model",
+        action="store_true",  # defaults to false
+        help="Synchronize masks ascross model",
     )
     # dataset
     parser.add_argument(
@@ -95,6 +99,9 @@ def get_default_parser():
     )
     parser.add_argument("--epochs", type=int, default=100)
     parser.add_argument("--lr", type=float, default=0.005)
+    parser.add_argument(
+        "--model_save_path", type=str, help="Path to save trained model to"
+    )
     # experiment
     parser.add_argument(
         "--local_only",
