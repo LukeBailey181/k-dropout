@@ -94,10 +94,25 @@ def evaluate_subnets_in_dropout_net(path_to_model, num_subnets, test_set):
     # Init lens net using the loaded model
     net = torch.load(path_to_model)
 
-    # TODO complete this
+    dropout_subnet_accs = []
+    for _ in range(num_subnets): 
+        # Get accuracy when using dropout net by setting eval_net=False 
+        _, test_acc = test_net(net, test_set, eval_net=False)
+        dropout_subnet_accs.append(test_acc)
+
+    subnet_idxs = list(range(num_subnets))
+    # Do wandb logging for random subnets
+    wandb_plot(
+        "dropout_subnet_accs", 
+        "Dropout Subnet Test Accuracy",
+        "Subnet Index",
+        "Test Accuracy", 
+        subnet_idxs,
+        dropout_subnet_accs,
+        "scatter"
+    )
 
 
-#-----wandb plotting helper functions-----#
 def wandb_plot(plot_id, plot_title, x_label, y_label, x_vals, y_vals, plot_type):
     """Helper function for custom wandb plots
     
