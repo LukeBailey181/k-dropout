@@ -1,0 +1,48 @@
+name: cifar_no_dropout
+description: Benchmark the network with no dropout
+project: k-dropout
+program: train_net.py
+method: grid
+metric:
+  name: test_acc
+  goal: minimize
+parameters:
+  # experiment
+  seed:
+    values: [1, 2, 3, 4, 5]
+  # training
+  device: 
+    value: cuda
+  epochs:
+    value: 300
+  lr:
+    value: 0.0005
+  # model
+  input_size:
+    value: 3072
+  hidden_size:
+    value: 2000
+  output_size:
+    value: 10
+  n_hidden:
+    value: 2
+  # dropout
+  dropout_layer:
+    value: none
+  input_p:
+    value: 0.
+  p:
+    value: 0.
+  k:
+    values: [1]
+  m:
+    values: [-1]
+  # dataset
+  dataset_name:
+    value: cifar10
+  batch_size:
+    value: 512
+  test_batch_size:
+    value: 512
+  num_workers:
+    value: 4
