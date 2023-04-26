@@ -69,7 +69,7 @@ if __name__ == "__main__":
         hidden_size=args.hidden_size,
     )
 
-    if args.input_p is not None:
+    if dropout_layer is not None:
         input_dropout_kwargs = dict(layer_kwargs)
         input_dropout_kwargs["p"] = args.input_p
         if args.dropout_layer == "pool":
