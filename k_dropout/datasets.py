@@ -22,7 +22,9 @@ def process_dataset(dataset, device=DEVICE):
     return processed_data
 
 
-def get_mnist(train_batch_size=64, test_batch_size=1000, num_workers=2, root=DATASET_ROOT):
+def get_mnist(
+    train_batch_size=64, test_batch_size=1000, num_workers=2, root=DATASET_ROOT
+):
     """
     Download MNIST into ./datasets/ directory and return dataloaders containing
     MNIST. If ./datasets/ directory doesn't exist then it is made.
@@ -67,7 +69,9 @@ def get_mnist(train_batch_size=64, test_batch_size=1000, num_workers=2, root=DAT
     return train_loader, test_loader
 
 
-def get_cifar10(train_batch_size=4, test_batch_size=4, num_workers=2, root=DATASET_ROOT):
+def get_cifar10(
+    train_batch_size=4, test_batch_size=4, num_workers=2, root=DATASET_ROOT
+):
     transform = transforms.Compose(
         [
             transforms.ToTensor(),

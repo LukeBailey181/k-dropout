@@ -155,7 +155,6 @@ class PoolKDropout(nn.Module):
             )
 
         if self.training:
-
             self.num_training_passes += 1
 
             # sample mask indices

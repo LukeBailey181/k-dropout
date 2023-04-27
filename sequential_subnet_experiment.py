@@ -29,7 +29,6 @@ def remove_manual_seed(model: nn.Sequential):
             layer.use_manual_seed = False
 
 
-# TODO: format with black
 if __name__ == "__main__":
     """
     Train a sequential dropout network on cifar10 and track the performance of
@@ -45,16 +44,20 @@ if __name__ == "__main__":
     # training
     parser.add_argument("--epochs", type=int, default=300)
     parser.add_argument("--lr", type=float, default=5e-4)
-    parser.add_argument("--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu")
+    parser.add_argument(
+        "--device", type=str, default="cuda" if torch.cuda.is_available() else "cpu"
+    )
     # model
     parser.add_argument("--input_size", type=int, default=3072)
     parser.add_argument("--hidden_size", type=int, default=2000)
     parser.add_argument("--n_hidden", type=int, default=2)
     parser.add_argument("--output_size", type=int, default=10)
     # dropout layer (always sequential for this experiment)
-    parser.add_argument("--p", type=float, default=.5)
-    parser.add_argument("--input_p", type=float, default=0.)
-    parser.add_argument("--m", type=int, default=1)  # m != 1 is more difficult to interpret
+    parser.add_argument("--p", type=float, default=0.5)
+    parser.add_argument("--input_p", type=float, default=0.0)
+    parser.add_argument(
+        "--m", type=int, default=1
+    )  # m != 1 is more difficult to interpret
     # dataset
     parser.add_argument("--dataset_name", type=str, default="cifar10")
     parser.add_argument("--batch_size", type=int, default=512)
@@ -126,8 +129,10 @@ if __name__ == "__main__":
     total_subnets = int(args.epochs * n_batches / args.k)
     epochs_per_subnet = int(args.epochs / total_subnets)
 
-    mask_subnet_seeds = np.random.randint(2 ** 32, size=total_subnets).tolist()
-    random_subnet_seeds = np.random.randint(2 ** 32, size=args.n_random_subnets).tolist()
+    mask_subnet_seeds = np.random.randint(2**32, size=total_subnets).tolist()
+    random_subnet_seeds = np.random.randint(
+        2**32, size=args.n_random_subnets
+    ).tolist()
 
     # custom training loop with manual seeding
     criterion = nn.CrossEntropyLoss()
@@ -162,13 +167,19 @@ if __name__ == "__main__":
         for ix, seed in enumerate(mask_subnet_seeds):
             use_manual_seed(model, seed)
             test_loss, acc = test_net(model, test_set, device=args.device)
-            wandb.log({f"test_loss_mask_{ix}": test_loss, f"test_acc_mask_{ix}": acc}, step=example_ct)
+            wandb.log(
+                {f"test_loss_mask_{ix}": test_loss, f"test_acc_mask_{ix}": acc},
+                step=example_ct,
+            )
 
         # for each random subnet
         for ix, seed in enumerate(random_subnet_seeds):
             use_manual_seed(model, seed)
             test_loss, acc = test_net(model, test_set, device=args.device)
-            wandb.log({f"test_loss_random_{ix}": test_loss, f"test_acc_random_{ix}": acc}, step=example_ct)
+            wandb.log(
+                {f"test_loss_random_{ix}": test_loss, f"test_acc_random_{ix}": acc},
+                step=example_ct,
+            )
 
         # for the entire model
         remove_manual_seed(model)

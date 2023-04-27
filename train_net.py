@@ -31,11 +31,11 @@ if __name__ == "__main__":
     # wandb integration
     if not args.local_only:
         # log the git diff and untracked files as an artifact
-        
-        #snapshot_name, snapshot_path = write_git_snapshot()
+
+        # snapshot_name, snapshot_path = write_git_snapshot()
 
         config = vars(args)
-        #config["git_snapshot"] = snapshot_name
+        # config["git_snapshot"] = snapshot_name
         # TODO: specify run name in a more precise way
         #       e.g. with args.run_name_prefix and args.run_name_items which could
         #       include the params (p, k, etc..) to put in the run name
@@ -53,9 +53,9 @@ if __name__ == "__main__":
         run = wandb.init(project="k-dropout", config=config, name=run_name)
 
         # TODO fix artifact logging
-        #snapshot_artifact = wandb.Artifact(snapshot_name, type="git_snapshot")
-        #snapshot_artifact.add_file(snapshot_path)
-        #wandb.log_artifact(snapshot_artifact)
+        # snapshot_artifact = wandb.Artifact(snapshot_name, type="git_snapshot")
+        # snapshot_artifact.add_file(snapshot_path)
+        # wandb.log_artifact(snapshot_artifact)
 
     # create model
     dropout_layer, layer_kwargs = get_dropout_layer(
@@ -113,6 +113,5 @@ if __name__ == "__main__":
     )
 
     if args.model_save_path is not None:
-        # Save trained model 
+        # Save trained model
         torch.save(model, args.model_save_path)
-
