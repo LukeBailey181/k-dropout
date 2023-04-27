@@ -137,31 +137,10 @@ if __name__ == "__main__":
     # custom training loop with manual seeding
     criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
-
     model.to(args.device)
-
     example_ct = 0
-    for epoch in tqdm(range(args.epochs)):
-        mask_seed_ix = epoch // epochs_per_subnet
-        use_manual_seed(model, mask_subnet_seeds[mask_seed_ix])
 
-        model.train()
-        epoch_loss = 0
-        for X, y in train_set:
-            example_ct += X.shape[0]
-            X = X.to(args.device)
-            y = y.to(args.device)
-
-            model.zero_grad()
-            output = model(X)
-            loss = criterion(output, y)
-            loss.backward()
-            optimizer.step()
-
-            wandb.log({"train_batch_loss": loss.item()}, step=example_ct)
-            epoch_loss += loss.item()
-        wandb.log({"train_epoch_loss": epoch_loss}, step=example_ct)
-
+    def evaluate():
         # evaluate...
         # for each mask subnet
         for ix, seed in enumerate(mask_subnet_seeds):
@@ -185,3 +164,28 @@ if __name__ == "__main__":
         remove_manual_seed(model)
         test_loss, acc = test_net(model, test_set, device=args.device)
         wandb.log({"test_loss_full": test_loss, "test_acc_full": acc}, step=example_ct)
+
+    evaluate()  # evaluate once on the untrained model
+
+    for epoch in tqdm(range(args.epochs)):
+        mask_seed_ix = epoch // epochs_per_subnet
+        use_manual_seed(model, mask_subnet_seeds[mask_seed_ix])
+
+        model.train()
+        epoch_loss = 0
+        for X, y in train_set:
+            example_ct += X.shape[0]
+            X = X.to(args.device)
+            y = y.to(args.device)
+
+            model.zero_grad()
+            output = model(X)
+            loss = criterion(output, y)
+            loss.backward()
+            optimizer.step()
+
+            wandb.log({"train_batch_loss": loss.item()}, step=example_ct)
+            epoch_loss += loss.item()
+        wandb.log({"train_epoch_loss": epoch_loss}, step=example_ct)
+
+        evaluate()  # evaluate after each epoch
