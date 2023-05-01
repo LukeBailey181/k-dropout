@@ -14,9 +14,6 @@ command:
   - ${args}
   - --preprocess_dataset
 parameters:
-  # experiment
-  restarts: # TODO: find a better way to do multiple restarts
-    value: 1
   # model
   path_to_load_model:
     value: "./models/cifar10_ps_50.pt"
