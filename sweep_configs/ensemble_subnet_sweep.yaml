@@ -1,0 +1,41 @@
+name: cifar10_ensemble_of_subnets
+description: Train an ensemble of 50 subnets for cifar10
+project: k-dropout
+program: ensemble_subnet_analysis.py
+method: grid
+metric:
+  name: test_loss
+  goal: minimize
+# TODO: early_terminate
+command:
+  - ${env}
+  - ${interpreter}
+  - ${program}
+  - ${args}
+  - --preprocess_dataset
+parameters:
+  # experiment
+  restarts: # TODO: find a better way to do multiple restarts
+    value: 1
+  # model
+  path_to_load_model:
+    value: "./models/cifar10_ps_50.pt"
+  subnet_idx:
+    values: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 
+      26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49]
+  path_to_save_model:
+    value: "./models/ensemble/cifar10/cifar10_ensemble_subnet"
+  # dataset
+  dataset_name:
+    value: cifar10
+  batch_size:
+    value: 512
+  num_workers:
+    value: 4
+  # training
+  device: 
+    value: cuda
+  epochs:
+    value: 300
+  lr:
+    value: 0.0005
