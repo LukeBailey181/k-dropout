@@ -26,6 +26,9 @@ class SequentialKDropout(nn.Module):
         self.uses = 0
         self.seed = torch.Generator().seed()
 
+        self.manual_seed = 0
+        self.use_manual_seed = False
+
     def forward(self, x: Tensor) -> Tensor:
         if x.dim() != 2:
             raise ValueError(f"Input must be of shape (batch_size, d), got {x.shape}")
@@ -37,13 +40,17 @@ class SequentialKDropout(nn.Module):
                 f"m value of {self.m} does not divide batch_size of value {batch_size}"
             )
 
-        if self.training:
+        if self.training or self.use_manual_seed:  # when using manual seed, always mask
             g = torch.Generator(device=x.device)
-            if self.uses % self.k == 0:  # update mask seed every k steps
-                self.seed = g.seed()
+
+            if self.use_manual_seed:
+                g.manual_seed(self.manual_seed)
             else:
-                g.manual_seed(self.seed)
-            self.uses += 1
+                if self.uses % self.k == 0:  # update mask seed every k steps
+                    self.seed = g.seed()
+                else:
+                    g.manual_seed(self.seed)
+                self.uses += 1
 
             masks_per_batch = self.m if self.m > 0 else batch_size
             mask_n_repeats = batch_size // masks_per_batch
@@ -57,6 +64,8 @@ class SequentialKDropout(nn.Module):
         return x
 
     def extra_repr(self) -> str:
+        if self.use_manual_seed:
+            return f"p={self.p}, k={self.k}, m={self.m}, manual_seed={self.manual_seed}"
         return f"p={self.p}, k={self.k}, m={self.m}"
 
 
@@ -146,7 +155,6 @@ class PoolKDropout(nn.Module):
             )
 
         if self.training:
-
             self.num_training_passes += 1
 
             # sample mask indices

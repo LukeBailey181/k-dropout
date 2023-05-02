@@ -20,6 +20,7 @@ except ModuleNotFoundError:
 EXPERIMENT_TYPES = ("pool_subnets", "standard_dropout_subnets")
 BATCH_SIZE = 512
 
+
 # TODO: implement plot_train_loss (using wandb and maybe without it too)
 def plot_train_loss():
     pass
@@ -28,7 +29,6 @@ def plot_train_loss():
 def evaluate_subnets_in_pooled_dropout_net(
     path_to_model, num_subnets, test_set, run_name, wandb_config
 ):
-
     # TODO add support for local run
     run = wandb.init(project="k-dropout", config=config, name=run_name)
 
@@ -101,7 +101,6 @@ def evaluate_subnets_in_pooled_dropout_net(
 def evaluate_subnets_in_dropout_net(
     path_to_model, num_subnets, test_set, run_name, wandb_config
 ):
-
     # TODO add support for local run
     run = wandb.init(project="k-dropout", config=config, name=run_name)
 

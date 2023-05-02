@@ -5,6 +5,9 @@
 artifacts/
 wandb/
 
+# models
+models/
+
 # Datasets
 experiments.ipynb
 datasets

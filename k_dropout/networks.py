@@ -24,19 +24,19 @@ class PoolDropoutLensNet(nn.Module):
         pool_size: Optional[int] = None,
         p: Optional[float] = None,
         m: Optional[int] = None,
-        init_net: Optional[nn.Sequential] = None, 
+        init_net: Optional[nn.Sequential] = None,
     ):
         """
         Args:
-            input_dim: dataset input dim 
-            num_classes: dataset num classes 
+            input_dim: dataset input dim
+            num_classes: dataset num classes
             hidden_units: number of hidden units for net
             hidden_layers: number of hidden layers for net
             pool_size: dropout pool size for net
             p: probability of dropout for all dropout layers of net
             m: number of dropout masks per batch
             init_net: if not none, then this is used for self.net instead
-                of initializing a new net from the above arguments. This 
+                of initializing a new net from the above arguments. This
                 should be an MLP with only pooled dropout layers.
         """
 
@@ -58,13 +58,14 @@ class PoolDropoutLensNet(nn.Module):
 
         # Used when sampling random subnets
         self.using_random_masking = False
-        self.pooled_dropout_layers = [layer for layer in self.net if isinstance(layer, PoolKDropout)]
+        self.pooled_dropout_layers = [
+            layer for layer in self.net if isinstance(layer, PoolKDropout)
+        ]
         self.p = self.pooled_dropout_layers[-1].p
 
         return
 
     def activate_random_masking(self):
-
         if self.using_random_masking:
             return
         self.using_random_masking = True
@@ -75,7 +76,6 @@ class PoolDropoutLensNet(nn.Module):
                 self.net[layer_idx] = nn.Dropout(p=self.p)
 
     def deactivate_random_masking(self):
-
         if not self.using_random_masking:
             return
         self.using_random_masking = False
@@ -87,18 +87,20 @@ class PoolDropoutLensNet(nn.Module):
                 pooled_droout_idx += 1
 
     def freeze_mask(self, mask_idx):
-
         if self.using_random_masking:
-            raise RuntimeError("Unable to freeze mask as currently using random masking.")
+            raise RuntimeError(
+                "Unable to freeze mask as currently using random masking."
+            )
 
         for layer in self.net:
             if isinstance(layer, PoolKDropout):
                 layer.freeze_mask(mask_idx)
 
     def unfreeze_mask(self):
-
         if self.using_random_masking:
-            raise RuntimeError("Unable to unfreeze mask as currently using random masking.")
+            raise RuntimeError(
+                "Unable to unfreeze mask as currently using random masking."
+            )
 
         for layer in self.net:
             if isinstance(layer, PoolKDropout):
@@ -106,7 +108,6 @@ class PoolDropoutLensNet(nn.Module):
 
     @torch.no_grad()
     def reset_weights(self):
-
         for layer in self.net:
             if isinstance(layer, nn.Linear):
                 # Reinit weights using same code as nn.Linear source
@@ -241,8 +242,8 @@ def make_standard_net(
         input_dim, num_classes, hidden_units, hidden_layers, dropout_layer=None
     )
 
-def test_pool_lens_net():
 
+def test_pool_lens_net():
     net = make_pool_kd_net(p=0.2)
     lens_net = PoolDropoutLensNet(init_net=net)
     print("LENS NET REGULAR")
@@ -253,6 +254,7 @@ def test_pool_lens_net():
     lens_net.deactivate_random_masking()
     print("LENS NET RETURN TO REGULAR")
     print(lens_net)
+
 
 if __name__ == "__main__":
     standard_net = make_standard_net()
