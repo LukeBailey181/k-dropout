@@ -41,6 +41,7 @@ if __name__ == "__main__":
     parser.add_argument("--n_random_subnets", type=int, default=10)
     parser.add_argument("--run_name", type=str, default=None)
     parser.add_argument("--seed", type=int, default=229)
+    parser.add_argument("--skip_mask_performance", action='store_true')
     # training
     parser.add_argument("--epochs", type=int, default=300)
     parser.add_argument("--lr", type=float, default=5e-4)
@@ -125,9 +126,8 @@ if __name__ == "__main__":
 
     # setup manual seeds
     n_batches = len(train_set)
-    assert args.k % n_batches == 0
+    assert args.epochs * n_batches % args.k == 0
     total_subnets = int(args.epochs * n_batches / args.k)
-    epochs_per_subnet = int(args.epochs / total_subnets)
 
     mask_subnet_seeds = np.random.randint(2**32, size=total_subnets).tolist()
     random_subnet_seeds = np.random.randint(
@@ -140,16 +140,17 @@ if __name__ == "__main__":
     model.to(args.device)
     example_ct = 0
 
-    def evaluate():
+    def evaluate(skip_mask_performance=False):
         # evaluate...
         # for each mask subnet
-        for ix, seed in enumerate(mask_subnet_seeds):
-            use_manual_seed(model, seed)
-            test_loss, acc = test_net(model, test_set, device=args.device)
-            wandb.log(
-                {f"test_loss_mask_{ix}": test_loss, f"test_acc_mask_{ix}": acc},
-                step=example_ct,
-            )
+        if not skip_mask_performance:
+            for ix, seed in enumerate(mask_subnet_seeds):
+                use_manual_seed(model, seed)
+                test_loss, acc = test_net(model, test_set, device=args.device)
+                wandb.log(
+                    {f"test_loss_mask_{ix}": test_loss, f"test_acc_mask_{ix}": acc},
+                    step=example_ct,
+                )
 
         # for each random subnet
         for ix, seed in enumerate(random_subnet_seeds):
@@ -165,15 +166,17 @@ if __name__ == "__main__":
         test_loss, acc = test_net(model, test_set, device=args.device)
         wandb.log({"test_loss_full": test_loss, "test_acc_full": acc}, step=example_ct)
 
-    evaluate()  # evaluate once on the untrained model
+    evaluate(args.skip_mask_performance)  # evaluate once on the untrained model
 
+    batch_ct = 0
     for epoch in tqdm(range(args.epochs)):
-        mask_seed_ix = epoch // epochs_per_subnet
-        use_manual_seed(model, mask_subnet_seeds[mask_seed_ix])
-
         model.train()
         epoch_loss = 0
         for X, y in train_set:
+            mask_seed_ix = batch_ct // args.k
+            use_manual_seed(model, mask_subnet_seeds[mask_seed_ix])
+
+            batch_ct += 1
             example_ct += X.shape[0]
             X = X.to(args.device)
             y = y.to(args.device)
@@ -188,4 +191,5 @@ if __name__ == "__main__":
             epoch_loss += loss.item()
         wandb.log({"train_epoch_loss": epoch_loss}, step=example_ct)
 
-        evaluate()  # evaluate after each epoch
+        skip_mask_performance = args.skip_mask_performance and epoch != args.epochs - 1
+        evaluate(skip_mask_performance)  # evaluate after each epoch
