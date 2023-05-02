@@ -154,12 +154,87 @@ def plot_subnet_performance(run_id, metric='acc'):
 
     mask_values = [summary[c] for c in mask_cols]
     random_values = [summary[c] for c in random_cols]
-    plt.scatter(range(n_masks), mask_values, label='dropout subnets')
-    plt.scatter(np.linspace(0, n_masks - 1, n_random_subnets), random_values, color='r', alpha=.5, label='random subnets')
-    plt.axhline(y=np.array(random_values).mean(), color='r', alpha=.5, label='random subnets (mean)')
+    plt.scatter(range(n_masks), mask_values)
+    # plt.scatter(range(n_masks), mask_values, label='dropout subnets')
+    # plt.scatter(np.linspace(0, n_masks - 1, n_random_subnets), random_values, color='r', alpha=.5, label='random subnets')
+    # plt.axhline(y=np.array(random_values).mean(), color='r', alpha=.5, label='random subnets (mean)')
 
     plt.title(f'Sequential k-dropout k={k}, m={m}')
-    plt.xlabel('mask index')
-    plt.ylabel(f'test_{metric}')
-    plt.legend()
+    plt.xlabel('Mask Index')
+    plt.ylabel(f'Test {"Accuracy" if metric == "acc" else "Loss"} at End of Training')
+    # plt.legend()
     plt.show()
+
+
+def plot_subnet_boxplots(
+        rid_seq, rid_std, rid_no, metric='acc', offset_full_ticks=False,
+        figsize=(14, 5), width_ratios=(2, 1)):
+    METRICS = ('acc', 'loss')
+    if metric not in METRICS:
+        raise ValueError(f'metric must be one of {METRICS}')
+    if isinstance(rid_seq, str):
+        rid_seq = [rid_seq]
+
+    rconf_seq = [get_run_config(rid) for rid in rid_seq]
+    rconf_std = get_run_config(rid_std)
+    rconf_no = get_run_config(rid_no)
+    summary_seq = [get_run_summary(rid) for rid in rid_seq]
+    summary_std = get_run_summary(rid_std)
+    summary_no = get_run_summary(rid_no)
+
+    n_seq_random_subnets = [rconf['n_random_subnets'] for rconf in rconf_seq]
+    n_std_random_subnets = rconf_std['n_random_subnets']
+    n_no_random_subnets = rconf_no['n_random_subnets']
+    ks = [rconf['k'] for rconf in rconf_seq]
+    epochs = [rconf['epochs'] for rconf in rconf_seq]
+    n_masks = [e * BATCHES_PER_EPOCH // k for e, k in zip(epochs, ks)]
+
+    mask_cols = [[f'test_{metric}_mask_{i}' for i in range(n)] for n in n_masks]
+    rand_seq_cols = [[f'test_{metric}_random_{i}' for i in range(n)] for n in n_seq_random_subnets]
+    rand_std_cols = [f'test_{metric}_random_{i}' for i in range(n_std_random_subnets)]
+    rand_no_cols = [f'test_{metric}_random_{i}' for i in range(n_no_random_subnets)]
+
+    mask_values = [[ss[c] for c in mc] for mc, ss in zip(mask_cols, summary_seq)]
+    rand_seq_values = [[ss[c] for c in rsc] for rsc, ss in zip(rand_seq_cols, summary_seq)]
+    rand_std_values = [summary_std[c] for c in rand_std_cols]
+    rand_no_values = [summary_no[c] for c in rand_no_cols]
+
+    fig, axes = plt.subplots(1, 2, figsize=figsize, sharey=True, width_ratios=width_ratios)
+
+    all_values = [rand_no_values, rand_std_values]
+    colors = ['C0', 'C1']
+    labels = ['no dropout\nrandom subnets', 'standard dropout\nrandom subnets']
+    for i, (r, m, k) in enumerate(zip(rand_seq_values, mask_values, ks)):
+        all_values.extend([r, m])
+        colors.extend(2 * [f'C{i + 2}'])
+        labels.extend([
+            f'sequential (k={k})\nrandom subnets',
+            f'sequential (k={k})\ndropout subnets',
+        ])
+    bp = axes[0].boxplot(all_values,
+                    whis=(0, 100), patch_artist=True)
+    for patch, color in zip(bp['boxes'], colors):
+        patch.set_facecolor(color)
+    axes[0].set_xticklabels(labels, fontsize=10)
+    axes[0].set_title('Subnet Performance')
+    axes[0].set_ylabel('Test Accuracy at End of Training')
+    for tick in axes[0].xaxis.get_major_ticks()[1::2]:
+        tick.set_pad(30)
+    bottom = axes[0].get_ylim()[0]
+
+    axes[1].set_title('Full Network Performance')
+    bars = [summary_no[f'test_{metric}_full'], summary_std[f'test_{metric}_full']]
+    bars += [ss[f'test_{metric}_full'] for ss in summary_seq]
+    labels = ['no dropout', 'standard dropout']
+    labels += [f'sequential (k={k})' for k in ks]
+    axes[1].bar(
+        range(len(bars)),
+        bars,
+        color=[f'C{i}' for i in range(len(bars))], width=.5, align='center')
+    axes[1].set_xticks(range(len(labels)), labels, fontsize=10)
+    if offset_full_ticks:
+        for tick in axes[1].xaxis.get_major_ticks()[1::2]:
+            tick.set_pad(30)
+    axes[1].set_ylim(bottom=bottom)
+
+    fig.tight_layout()
