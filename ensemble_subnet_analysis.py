@@ -3,7 +3,7 @@ import random
 import numpy as np
 from torch.nn import Sequential
 import wandb
-from statistics import mean
+from statistics import mean, mode
 import argparse
 
 from k_dropout.experiment_helpers import DATASETS, get_dataset
@@ -47,7 +47,45 @@ def evaluate_ensemble_of_subnets(
     )
 
     if path_to_save_model is not None:
-        torch.save(lens_net.net, path_to_save_model + f"_subnet_{subnet_idx}")
+        torch.save(lens_net.net, path_to_save_model + f"_{subnet_idx}")
+
+def evaluate_ensemble(
+    path_to_models_dir, 
+    model_prefix,
+    num_models,
+    test_set
+):
+    
+    models = []
+    for subnet_idx in range(num_models):
+        # Get string 
+        path = path_to_models_dir + model_prefix + f"_{subnet_idx}"
+        net = torch.load(path)
+        lens_net = PoolDropoutLensNet(init_net=net)
+        lens_net.freeze_mask(subnet_idx)
+
+        models.append(torch.load(lens_net))
+
+    # Evaluate ensemble
+    with torch.no_grad():
+
+        num_correct = 0
+        total_examples = 0
+
+        for X, y in test_set:
+            # Make sure batch size is 1
+            assert(X.shape[0] == 1)
+            preds = []
+            for lens_net in models:
+                # Apprend predictions to preds
+                output = lens_net(X)
+                preds.append(output.argmax(dim=1).item())
+            
+            pred = mode(preds)
+            num_correct += pred == y.item() 
+            total_examples += 1 
+
+        print(num_correct/total_examples)
 
 if __name__=="__main__":
     # TODO do some arg parsing here
@@ -139,3 +177,21 @@ if __name__=="__main__":
         seed=args.seed,
         path_to_save_model=args.path_to_save_model,
     )
+
+
+    """
+    train_set, test_set = get_dataset(
+        dataset_name="cifar10",
+        batch_size=1,
+        test_batch_size=1,
+        num_workers=4,
+        preprocess_dataset=True,
+        device="cuda",
+    )
+    evaluate_ensemble(
+        path_to_models_dir="./models/ensemble/cifar10",
+        model_prefix="cifar10_ensemble_subnet_subnet",
+        num_models=50,
+        test_set=test_set
+    )
+    """
