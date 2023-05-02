@@ -74,7 +74,7 @@ if __name__ == "__main__":
     config["git_snapshot"] = snapshot_name
 
     if args.run_name is None:
-        run_name = f"sequential_subnet_k={args.k}_epochs={args.epochs}"
+        run_name = f"sequential_subnet_{'no_' if args.p == 0 else ''}dropout_epochs={args.epochs}"
     else:
         run_name = args.run_name
     run = wandb.init(project="k-dropout", config=config, name=run_name)
@@ -133,6 +133,10 @@ if __name__ == "__main__":
     def evaluate():
         # evaluate...
         # for each random subnet
+        # use subnets even if p=0
+        for layer in model:
+            if isinstance(layer, SequentialKDropout):
+                layer.p = .5
         for ix, seed in enumerate(random_subnet_seeds):
             use_manual_seed(model, seed)
             test_loss, acc = test_net(model, test_set, device=args.device)
@@ -140,6 +144,10 @@ if __name__ == "__main__":
                 {f"test_loss_random_{ix}": test_loss, f"test_acc_random_{ix}": acc},
                 step=example_ct,
             )
+        # reset p
+        for layer in model:
+            if isinstance(layer, SequentialKDropout):
+                layer.p = args.p
 
         # for the entire model
         remove_manual_seed(model)
