@@ -37,7 +37,6 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     # experiment
-    parser.add_argument("--k", type=int, required=True)
     parser.add_argument("--n_random_subnets", type=int, default=10)
     parser.add_argument("--run_name", type=str, default=None)
     parser.add_argument("--seed", type=int, default=229)
@@ -55,9 +54,6 @@ if __name__ == "__main__":
     # dropout layer (always sequential for this experiment)
     parser.add_argument("--p", type=float, default=0.5)
     parser.add_argument("--input_p", type=float, default=0.0)
-    parser.add_argument(
-        "--m", type=int, default=1
-    )  # m != 1 is more difficult to interpret
     # dataset
     parser.add_argument("--dataset_name", type=str, default="cifar10")
     parser.add_argument("--batch_size", type=int, default=512)
@@ -88,11 +84,11 @@ if __name__ == "__main__":
     wandb.log_artifact(snapshot_artifact)
 
     # create model
-    dropout_layer = SequentialKDropout
+    dropout_layer = SequentialKDropout  # still need to use sequential dropout for more control
     layer_kwargs = {
         "p": args.p,
-        "k": args.k,
-        "m": args.m,
+        "k": 1,
+        "m": 512,
     }
 
     input_dropout_kwargs = dict(layer_kwargs)
@@ -124,12 +120,6 @@ if __name__ == "__main__":
     print(f"Training for {args.epochs} epochs...")
 
     # setup manual seeds
-    n_batches = len(train_set)
-    assert args.k % n_batches == 0
-    total_subnets = int(args.epochs * n_batches / args.k)
-    epochs_per_subnet = int(args.epochs / total_subnets)
-
-    mask_subnet_seeds = np.random.randint(2**32, size=total_subnets).tolist()
     random_subnet_seeds = np.random.randint(
         2**32, size=args.n_random_subnets
     ).tolist()
@@ -142,15 +132,6 @@ if __name__ == "__main__":
 
     def evaluate():
         # evaluate...
-        # for each mask subnet
-        for ix, seed in enumerate(mask_subnet_seeds):
-            use_manual_seed(model, seed)
-            test_loss, acc = test_net(model, test_set, device=args.device)
-            wandb.log(
-                {f"test_loss_mask_{ix}": test_loss, f"test_acc_mask_{ix}": acc},
-                step=example_ct,
-            )
-
         # for each random subnet
         for ix, seed in enumerate(random_subnet_seeds):
             use_manual_seed(model, seed)
@@ -168,8 +149,7 @@ if __name__ == "__main__":
     evaluate()  # evaluate once on the untrained model
 
     for epoch in tqdm(range(args.epochs)):
-        mask_seed_ix = epoch // epochs_per_subnet
-        use_manual_seed(model, mask_subnet_seeds[mask_seed_ix])
+        remove_manual_seed(model)  # setup for training
 
         model.train()
         epoch_loss = 0
