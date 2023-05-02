@@ -119,7 +119,7 @@ class PoolDropoutLensNet(nn.Module):
                 # at https://github.com/pytorch/pytorch/blob/master/torch/nn/modules/linear.py
                 nn.init.kaiming_uniform_(layer.weight.data, a=math.sqrt(5))
                 if layer.bias is not None:
-                    fan_in, _ = nn.init._calculate_fan_in_and_fan_out(self.weight)
+                    fan_in, _ = nn.init._calculate_fan_in_and_fan_out(layer.weight)
                     bound = 1 / math.sqrt(fan_in) if fan_in > 0 else 0
                     nn.init.uniform_(layer.bias, -bound, bound)
 

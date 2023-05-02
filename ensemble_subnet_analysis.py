@@ -114,7 +114,7 @@ if __name__=="__main__":
     args = parser.parse_args()
     config = vars(args)
 
-    run_name = f"{args.dataset}_ensemble_subnet_{args.subnet_idx}"
+    run_name = f"{args.dataset_name}_ensemble_subnet_{args.subnet_idx}"
     # TODO add support for local run
     run = wandb.init(project="k-dropout", config=config, name=run_name)
 
