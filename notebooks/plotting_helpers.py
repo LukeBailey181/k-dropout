@@ -68,7 +68,7 @@ def plot_subnet_training(
     metric_df = get_run_metric(run_id, metric_cols)
 
     # plot test accuracy for each mask
-    n_rows = round(n_subnets / n_cols + 0.5)
+    n_rows = round(n_subnets / n_cols + 0.49)
     fig, axes = plt.subplots(
         n_rows, n_cols, figsize=(col_size * n_cols, row_size * n_rows), sharey=True)
     axes = axes.reshape((-1, n_cols))  # handle 1 row case
@@ -82,7 +82,10 @@ def plot_subnet_training(
             ax.plot(metric_df[metric_cols[i]][1:])
         else:
             ax.plot(metric_df[metric_cols[i]])
-        ax.set_title(f'{type} subnet {i}')
+        if type == 'mask':
+            ax.set_title(f'Dropout Subnet {i}')
+        else:
+            ax.set_title(f'Random Subnet {i}')
 
         if type == 'mask':
             training_start = i * epochs_per_mask
@@ -94,9 +97,9 @@ def plot_subnet_training(
                            linestyle='--', alpha=.5, linewidth=.5)
 
         if i % n_cols == 0:
-            ax.set_ylabel(f'test_{metric}')
+            ax.set_ylabel('Test Accuracy')
 
-    fig.suptitle(f'Sequential k-dropout k={k}, m={m} {type} subnets\n', fontsize=24)
+    # fig.suptitle(f'Sequential k-dropout k={k}, m={m} {type} subnets\n', fontsize=24)
     fig.tight_layout()
 
     plt.show()
