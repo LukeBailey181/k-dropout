@@ -142,18 +142,18 @@ def plot_subnet_performance(run_id, metric='acc'):
     k = run_config['k']
     m = run_config['m']
     epochs = run_config['epochs']
-    n_random_subnets = run_config['n_random_subnets']
+    # n_random_subnets = run_config['n_random_subnets']
 
     n_masks = epochs * BATCHES_PER_EPOCH // k
-    epochs_per_mask = epochs / n_masks
+    # epochs_per_mask = epochs / n_masks
 
     mask_cols = [f'test_{metric}_mask_{i}' for i in range(n_masks)]
-    random_cols = [f'test_{metric}_random_{i}' for i in range(n_random_subnets)]
+    # random_cols = [f'test_{metric}_random_{i}' for i in range(n_random_subnets)]
 
     summary = get_run_summary(run_id)
 
     mask_values = [summary[c] for c in mask_cols]
-    random_values = [summary[c] for c in random_cols]
+    # random_values = [summary[c] for c in random_cols]
     plt.scatter(range(n_masks), mask_values)
     # plt.scatter(range(n_masks), mask_values, label='dropout subnets')
     # plt.scatter(np.linspace(0, n_masks - 1, n_random_subnets), random_values, color='r', alpha=.5, label='random subnets')
