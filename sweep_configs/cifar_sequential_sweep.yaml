@@ -1,5 +1,5 @@
-name: cifar_sequential_sweep_k
-description: Run sweep across k values for sequential k-dropout to find the k where perfomance improves the most
+name: cifar_sequential_sweep_m_large_k
+description: Run sweep filling in larger k values
 project: k-dropout
 program: train_net.py
 method: grid
@@ -9,7 +9,7 @@ metric:
 parameters:
   # experiment
   seed:
-    values: [282, 283, 284]
+    values: [282]
   # training
   device: 
     value: cuda
@@ -34,9 +34,9 @@ parameters:
   p:
     value: .5
   k:
-    values: [1, 97, 485, 970, 1455, 1940, 2425, 9700, 29100]  # every batch; epochs: 1, 5, 10, 15, 20, 25, 100, 300 (97 batches per epoch)
+    values: [4850, 970]
   m:
-    values: [1, 512]
+    values: [1, 8, 64, 128, 512]
   # dataset
   dataset_name:
     value: cifar10

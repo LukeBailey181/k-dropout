@@ -37,11 +37,9 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser()
     # experiment
-    parser.add_argument("--k", type=int, required=True)
     parser.add_argument("--n_random_subnets", type=int, default=10)
     parser.add_argument("--run_name", type=str, default=None)
     parser.add_argument("--seed", type=int, default=229)
-    parser.add_argument("--skip_mask_performance", action='store_true')
     # training
     parser.add_argument("--epochs", type=int, default=300)
     parser.add_argument("--lr", type=float, default=5e-4)
@@ -56,9 +54,6 @@ if __name__ == "__main__":
     # dropout layer (always sequential for this experiment)
     parser.add_argument("--p", type=float, default=0.5)
     parser.add_argument("--input_p", type=float, default=0.0)
-    parser.add_argument(
-        "--m", type=int, default=1
-    )  # m != 1 is more difficult to interpret
     # dataset
     parser.add_argument("--dataset_name", type=str, default="cifar10")
     parser.add_argument("--batch_size", type=int, default=512)
@@ -79,7 +74,7 @@ if __name__ == "__main__":
     config["git_snapshot"] = snapshot_name
 
     if args.run_name is None:
-        run_name = f"sequential_subnet_k={args.k}_epochs={args.epochs}"
+        run_name = f"sequential_subnet_{'no_' if args.p == 0 else ''}dropout_epochs={args.epochs}"
     else:
         run_name = args.run_name
     run = wandb.init(project="k-dropout", config=config, name=run_name)
@@ -89,11 +84,11 @@ if __name__ == "__main__":
     wandb.log_artifact(snapshot_artifact)
 
     # create model
-    dropout_layer = SequentialKDropout
+    dropout_layer = SequentialKDropout  # still need to use sequential dropout for more control
     layer_kwargs = {
         "p": args.p,
-        "k": args.k,
-        "m": args.m,
+        "k": 1,
+        "m": 512,
     }
 
     input_dropout_kwargs = dict(layer_kwargs)
@@ -125,11 +120,6 @@ if __name__ == "__main__":
     print(f"Training for {args.epochs} epochs...")
 
     # setup manual seeds
-    n_batches = len(train_set)
-    assert args.epochs * n_batches % args.k == 0
-    total_subnets = int(args.epochs * n_batches / args.k)
-
-    mask_subnet_seeds = np.random.randint(2**32, size=total_subnets).tolist()
     random_subnet_seeds = np.random.randint(
         2**32, size=args.n_random_subnets
     ).tolist()
@@ -140,19 +130,13 @@ if __name__ == "__main__":
     model.to(args.device)
     example_ct = 0
 
-    def evaluate(skip_mask_performance=False):
+    def evaluate():
         # evaluate...
-        # for each mask subnet
-        if not skip_mask_performance:
-            for ix, seed in enumerate(mask_subnet_seeds):
-                use_manual_seed(model, seed)
-                test_loss, acc = test_net(model, test_set, device=args.device)
-                wandb.log(
-                    {f"test_loss_mask_{ix}": test_loss, f"test_acc_mask_{ix}": acc},
-                    step=example_ct,
-                )
-
         # for each random subnet
+        # use subnets even if p=0
+        for layer in model:
+            if isinstance(layer, SequentialKDropout):
+                layer.p = .5
         for ix, seed in enumerate(random_subnet_seeds):
             use_manual_seed(model, seed)
             test_loss, acc = test_net(model, test_set, device=args.device)
@@ -160,23 +144,24 @@ if __name__ == "__main__":
                 {f"test_loss_random_{ix}": test_loss, f"test_acc_random_{ix}": acc},
                 step=example_ct,
             )
+        # reset p
+        for layer in model:
+            if isinstance(layer, SequentialKDropout):
+                layer.p = args.p
 
         # for the entire model
         remove_manual_seed(model)
         test_loss, acc = test_net(model, test_set, device=args.device)
         wandb.log({"test_loss_full": test_loss, "test_acc_full": acc}, step=example_ct)
 
-    evaluate(args.skip_mask_performance)  # evaluate once on the untrained model
+    evaluate()  # evaluate once on the untrained model
 
-    batch_ct = 0
     for epoch in tqdm(range(args.epochs)):
+        remove_manual_seed(model)  # setup for training
+
         model.train()
         epoch_loss = 0
         for X, y in train_set:
-            mask_seed_ix = batch_ct // args.k
-            use_manual_seed(model, mask_subnet_seeds[mask_seed_ix])
-
-            batch_ct += 1
             example_ct += X.shape[0]
             X = X.to(args.device)
             y = y.to(args.device)
@@ -191,5 +176,4 @@ if __name__ == "__main__":
             epoch_loss += loss.item()
         wandb.log({"train_epoch_loss": epoch_loss}, step=example_ct)
 
-        skip_mask_performance = args.skip_mask_performance and epoch != args.epochs - 1
-        evaluate(skip_mask_performance)  # evaluate after each epoch
+        evaluate()  # evaluate after each epoch
