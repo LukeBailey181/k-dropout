@@ -19,9 +19,9 @@ def test_net(net, dataset, device=DEVICE, eval_net=True):
         net: network to test
         dataset: dataset to test net on
         device: device to move net and data to, e.g. 'cuda'
-        eval_net: true if you want 'net.eval()' to be run. If not, the
-            net mode (train or eval) is unchaged. Used if you want to
-            keep a net with dropout in in training mode to evaluate a
+        eval_net: true if you want 'net.eval()' to be run. If not, the 
+            net mode (train or eval) is unchaged. Used if you want to 
+            keep a net with dropout in in training mode to evaluate a 
             subnet performance.
     """
 

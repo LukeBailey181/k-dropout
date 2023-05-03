@@ -8,7 +8,6 @@ try:
 except ModuleNotFoundError:
     from modules import SequentialKDropout, PoolKDropout
 
-
 import torch.nn as nn
 
 # from modules import SequentialKDropout, PoolKDropout
@@ -28,8 +27,8 @@ class PoolDropoutLensNet(nn.Module):
     ):
         """
         Args:
-            input_dim: dataset input dim
-            num_classes: dataset num classes
+            input_dim: dataset input dim 
+            num_classes: dataset num classes 
             hidden_units: number of hidden units for net
             hidden_layers: number of hidden layers for net
             pool_size: dropout pool size for net
@@ -92,6 +91,9 @@ class PoolDropoutLensNet(nn.Module):
                 "Unable to freeze mask as currently using random masking."
             )
 
+        if self.using_random_masking:
+            raise RuntimeError("Unable to freeze mask as currently using random masking.")
+
         for layer in self.net:
             if isinstance(layer, PoolKDropout):
                 layer.freeze_mask(mask_idx)
@@ -101,6 +103,9 @@ class PoolDropoutLensNet(nn.Module):
             raise RuntimeError(
                 "Unable to unfreeze mask as currently using random masking."
             )
+
+        if self.using_random_masking:
+            raise RuntimeError("Unable to unfreeze mask as currently using random masking.")
 
         for layer in self.net:
             if isinstance(layer, PoolKDropout):
@@ -114,7 +119,7 @@ class PoolDropoutLensNet(nn.Module):
                 # at https://github.com/pytorch/pytorch/blob/master/torch/nn/modules/linear.py
                 nn.init.kaiming_uniform_(layer.weight.data, a=math.sqrt(5))
                 if layer.bias is not None:
-                    fan_in, _ = nn.init._calculate_fan_in_and_fan_out(self.weight)
+                    fan_in, _ = nn.init._calculate_fan_in_and_fan_out(layer.weight)
                     bound = 1 / math.sqrt(fan_in) if fan_in > 0 else 0
                     nn.init.uniform_(layer.bias, -bound, bound)
 
@@ -242,8 +247,8 @@ def make_standard_net(
         input_dim, num_classes, hidden_units, hidden_layers, dropout_layer=None
     )
 
-
 def test_pool_lens_net():
+
     net = make_pool_kd_net(p=0.2)
     lens_net = PoolDropoutLensNet(init_net=net)
     print("LENS NET REGULAR")
@@ -254,7 +259,6 @@ def test_pool_lens_net():
     lens_net.deactivate_random_masking()
     print("LENS NET RETURN TO REGULAR")
     print(lens_net)
-
 
 if __name__ == "__main__":
     standard_net = make_standard_net()

@@ -138,36 +138,6 @@ def evaluate_subnets_in_dropout_net(
         plot_type="bar",
     )
 
-
-def evaluate_ensemble_of_subnets(
-    path_to_model, num_subnets, test_set, train_set, epochs, lr, seed, device
-):
-    # seed experiment
-    # TODO just move to __main__
-    random.seed(args.seed)
-    np.random.seed(args.seed)
-    torch.manual_seed(args.seed)
-
-    # Init lens net using the loaded model
-    net = torch.load(path_to_model)
-    lens_net = PoolDropoutLensNet(init_net=net)
-
-    independent_subnet_accs = []
-    for subnet_idx in range(num_subnets):
-        lens_net.reset_weights()
-        lens_net.freeze_mask(subnet_idx)
-
-        train_net(
-            net=net,
-            train_set=train_set,
-            test_set=test_set,
-            epochs=epochs,
-            lr=lr,
-            device=device,
-            use_wandb=True,  # TODO handle local runs
-        )
-
-
 def wandb_plot(plot_id, plot_title, x_label, y_label, x_vals, y_vals, plot_type):
     """Helper function for custom wandb plots
 
