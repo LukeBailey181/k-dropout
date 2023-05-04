@@ -99,6 +99,9 @@ def plot_subnet_training(
         if i % n_cols == 0:
             ax.set_ylabel('Test Accuracy')
 
+        if i // n_cols == n_rows - 1:
+            ax.set_xlabel('Epoch')
+
     # fig.suptitle(f'Sequential k-dropout k={k}, m={m} {type} subnets\n', fontsize=24)
     fig.tight_layout()
 
