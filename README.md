@@ -1,6 +1,6 @@
-# CS 229 Final Project: K-Dropout
+# CS 229 Final Project: k-Dropout
 
-TODO: put paper abstract (or some introduction of the project) here
+Dropout is a widely used regularization technique that helps improve the generalization capabilities of deep neural networks. In this paper, we introduce k-dropout, a novel generalization of the standard dropout technique. In k-dropout, instead of resampling dropout masks at every training iteration, masks are reused multiple times according to new $k$ and $m$ tunable hyperparameters. Resuing dropout masks leads to a reduced number of unique subnets being trained compared to traditional dropout. We empirically demonstrate that training a multilayer perceptron (MLP) on CIFAR-10 with as few as 50 distinct subnets using k-dropout yields performance comparable to that of regular dropout. Furthermore, we provide detailed analysis of the trade-off between the number of subnets and the model's performance, as well as explore details of the training dynamics that allow the training of few subnets to be competitive with standard dropout.
 
 ## Repo Structure
 
