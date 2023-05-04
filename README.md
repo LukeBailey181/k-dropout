@@ -21,7 +21,8 @@ Dropout is a widely used regularization technique that helps improve the general
 ├── standard_subnet_experiment.py
 ├── test_modules.py
 ├── train_net.py
-└── wandb_helpers.py
+├── wandb_helpers.py
+└── writeup.pdf
 ```
 
 ### `k_dropout`
@@ -54,3 +55,6 @@ The project root contains various files for running experiments.
 - `train_net.py` is the target for experiments that involve training a model with a set dropout module and hyperparameters and is used for the parameter sweeps.
 - `wandb_helpers.py` contains functions that store additional information in the runs on weights and biases.
 
+### Writeup
+
+The project writeup can be found in `writeup.pdf`.
