@@ -41,7 +41,7 @@ if __name__ == "__main__":
     parser.add_argument("--n_random_subnets", type=int, default=10)
     parser.add_argument("--run_name", type=str, default=None)
     parser.add_argument("--seed", type=int, default=229)
-    parser.add_argument("--skip_mask_performance", action='store_true')
+    parser.add_argument("--skip_mask_performance", action="store_true")
     # training
     parser.add_argument("--epochs", type=int, default=300)
     parser.add_argument("--lr", type=float, default=5e-4)

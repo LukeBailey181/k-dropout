@@ -27,8 +27,8 @@ class PoolDropoutLensNet(nn.Module):
     ):
         """
         Args:
-            input_dim: dataset input dim 
-            num_classes: dataset num classes 
+            input_dim: dataset input dim
+            num_classes: dataset num classes
             hidden_units: number of hidden units for net
             hidden_layers: number of hidden layers for net
             pool_size: dropout pool size for net
@@ -92,7 +92,9 @@ class PoolDropoutLensNet(nn.Module):
             )
 
         if self.using_random_masking:
-            raise RuntimeError("Unable to freeze mask as currently using random masking.")
+            raise RuntimeError(
+                "Unable to freeze mask as currently using random masking."
+            )
 
         for layer in self.net:
             if isinstance(layer, PoolKDropout):
@@ -105,7 +107,9 @@ class PoolDropoutLensNet(nn.Module):
             )
 
         if self.using_random_masking:
-            raise RuntimeError("Unable to unfreeze mask as currently using random masking.")
+            raise RuntimeError(
+                "Unable to unfreeze mask as currently using random masking."
+            )
 
         for layer in self.net:
             if isinstance(layer, PoolKDropout):
@@ -247,6 +251,7 @@ def make_standard_net(
         input_dim, num_classes, hidden_units, hidden_layers, dropout_layer=None
     )
 
+
 def test_pool_lens_net():
 
     net = make_pool_kd_net(p=0.2)
@@ -259,6 +264,7 @@ def test_pool_lens_net():
     lens_net.deactivate_random_masking()
     print("LENS NET RETURN TO REGULAR")
     print(lens_net)
+
 
 if __name__ == "__main__":
     standard_net = make_standard_net()
