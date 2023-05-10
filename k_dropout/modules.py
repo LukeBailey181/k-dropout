@@ -41,27 +41,30 @@ class SequentialKDropout(nn.Module):
             )
 
         if self.training or self.use_manual_seed:  # when using manual seed, always mask
-            g = torch.Generator(device=x.device)
-
-            if self.use_manual_seed:
-                g.manual_seed(self.manual_seed)
-            else:
-                if self.uses % self.k == 0:  # update mask seed every k steps
-                    self.seed = g.seed()
-                else:
-                    g.manual_seed(self.seed)
-                self.uses += 1
-
-            masks_per_batch = self.m if self.m > 0 else batch_size
-            mask_n_repeats = batch_size // masks_per_batch
-            mask_block = (
-                torch.rand((masks_per_batch, d), device=x.device, generator=g) >= self.p
-            )
-            batch_mask = mask_block.repeat(mask_n_repeats, 1)
-
+            batch_mask = self.get_mask()
             return (1.0 / (1 - self.p)) * (batch_mask * x)  # mask and scale
 
         return x
+
+    def get_mask(self, increment_uses: bool = True) -> torch.Tensor:
+        g = torch.Generator(device=x.device)
+
+        if self.use_manual_seed:
+            g.manual_seed(self.manual_seed)
+        else:
+            if self.uses % self.k == 0:  # update mask seed every k steps
+                self.seed = g.seed()
+            else:
+                g.manual_seed(self.seed)
+            self.uses += increment_uses
+
+        masks_per_batch = self.m if self.m > 0 else batch_size
+        mask_n_repeats = batch_size // masks_per_batch
+        mask_block = (
+            torch.rand((masks_per_batch, d), device=x.device, generator=g) >= self.p
+        )
+        batch_mask = mask_block.repeat(mask_n_repeats, 1)
+        return batch_mask
 
     def extra_repr(self) -> str:
         if self.use_manual_seed:

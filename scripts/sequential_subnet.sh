@@ -1,6 +1,6 @@
 #!/bin/bash
 
 python sequential_subnet_experiment.py \
-    --k 15 \
+    --k 4850 \
     --n_random_subnets 20 \
-    --skip_mask_performance
+    --store_weights

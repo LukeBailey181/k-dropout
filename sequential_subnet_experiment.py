@@ -42,6 +42,7 @@ if __name__ == "__main__":
     parser.add_argument("--run_name", type=str, default=None)
     parser.add_argument("--seed", type=int, default=229)
     parser.add_argument("--skip_mask_performance", action="store_true")
+    parser.add_argument("--store_weights", action="store_true")
     # training
     parser.add_argument("--epochs", type=int, default=300)
     parser.add_argument("--lr", type=float, default=5e-4)
@@ -140,7 +141,29 @@ if __name__ == "__main__":
     model.to(args.device)
     example_ct = 0
 
-    def evaluate(skip_mask_performance=False):
+    # store masks
+    if args.store_weights:
+        # for each mask subnet
+        masks = []
+        for ix, seed in enumerate(mask_subnet_seeds):
+            for layer in model:
+                if isinstance(layer, SequentialKDropout):
+                    layer.use_manual_seed = True
+                    layer.manual_seed = seed
+                    masks.append(layer.get_mask(increment_uses=False))
+        wandb.log({f"mask_{ix}": masks}, step=0)
+
+        # for each random subnet
+        masks = []
+        for ix, seed in enumerate(random_subnet_seeds):
+            for layer in model:
+                if isinstance(layer, SequentialKDropout):
+                    layer.use_manual_seed = True
+                    layer.manual_seed = seed
+                    masks.append(layer.get_mask(increment_uses=False))
+        wandb.log({f"random_{ix}": masks}, step=0)
+
+    def evaluate(skip_mask_performance=False, store_weights=args.store_weights):
         # evaluate...
         # for each mask subnet
         if not skip_mask_performance:
@@ -165,6 +188,15 @@ if __name__ == "__main__":
         remove_manual_seed(model)
         test_loss, acc = test_net(model, test_set, device=args.device)
         wandb.log({"test_loss_full": test_loss, "test_acc_full": acc}, step=example_ct)
+
+        # store weights
+        if store_weights:
+            weights = []
+            for layer in model:
+                if isinstance(layer, nn.Linear):
+                    weights.append(layer.state_dict()["weight"])
+                    weights.append(layer.state_dict()["bias"])
+            wandb.log({"weights": weights}, step=example_ct)
 
     evaluate(args.skip_mask_performance)  # evaluate once on the untrained model
 
