@@ -32,7 +32,7 @@ class SequentialKDropout(nn.Module):
     def forward(self, x: Tensor) -> Tensor:
         if x.dim() != 2:
             raise ValueError(f"Input must be of shape (batch_size, d), got {x.shape}")
-        batch_size, d = x.shape
+        batch_size, _ = x.shape
 
         # Check m divides batch size
         if self.m > 0 and batch_size % self.m != 0:
@@ -41,12 +41,13 @@ class SequentialKDropout(nn.Module):
             )
 
         if self.training or self.use_manual_seed:  # when using manual seed, always mask
-            batch_mask = self.get_mask()
+            batch_mask = self.get_mask(x)
             return (1.0 / (1 - self.p)) * (batch_mask * x)  # mask and scale
 
         return x
 
-    def get_mask(self, increment_uses: bool = True) -> torch.Tensor:
+    def get_mask(self, x: Tensor, increment_uses: bool = True) -> torch.Tensor:
+        batch_size, d = x.shape
         g = torch.Generator(device=x.device)
 
         if self.use_manual_seed:

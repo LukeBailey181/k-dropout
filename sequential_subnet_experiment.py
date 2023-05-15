@@ -1,7 +1,7 @@
 import random
 import argparse
 from tqdm import tqdm
-import sys
+import os
 
 import torch
 import torch.nn as nn
@@ -84,6 +84,7 @@ if __name__ == "__main__":
     else:
         run_name = args.run_name
     run = wandb.init(project="k-dropout", config=config, name=run_name)
+    run_id = run.id
 
     snapshot_artifact = wandb.Artifact(snapshot_name, type="git_snapshot")
     snapshot_artifact.add_file(snapshot_path)
@@ -140,28 +141,36 @@ if __name__ == "__main__":
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
     model.to(args.device)
     example_ct = 0
+    batch_ct = 0
+    epoch_ct = 0
 
     # store masks
     if args.store_weights:
+        os.makedirs(f"./models/{run_id}")
+
+        temp_input = torch.ones((1, args.input_size), device=args.device)
+
         # for each mask subnet
-        masks = []
         for ix, seed in enumerate(mask_subnet_seeds):
+            masks = []
             for layer in model:
                 if isinstance(layer, SequentialKDropout):
                     layer.use_manual_seed = True
                     layer.manual_seed = seed
-                    masks.append(layer.get_mask(increment_uses=False))
-        wandb.log({f"mask_{ix}": masks}, step=0)
+                    mask = layer.get_mask(temp_input, increment_uses=False).cpu().to(torch.uint8)
+                    masks.append(mask)
+            torch.save(masks, f"./models/{run_id}/dropout_mask_{ix}.pt")
 
         # for each random subnet
-        masks = []
         for ix, seed in enumerate(random_subnet_seeds):
+            masks = []
             for layer in model:
                 if isinstance(layer, SequentialKDropout):
                     layer.use_manual_seed = True
                     layer.manual_seed = seed
-                    masks.append(layer.get_mask(increment_uses=False))
-        wandb.log({f"random_{ix}": masks}, step=0)
+                    mask = layer.get_mask(temp_input, increment_uses=False).cpu().to(torch.uint8)
+                    masks.append(mask)
+            torch.save(masks, f"./models/{run_id}/random_mask_{ix}.pt")
 
     def evaluate(skip_mask_performance=False, store_weights=args.store_weights):
         # evaluate...
@@ -194,13 +203,12 @@ if __name__ == "__main__":
             weights = []
             for layer in model:
                 if isinstance(layer, nn.Linear):
-                    weights.append(layer.state_dict()["weight"])
-                    weights.append(layer.state_dict()["bias"])
-            wandb.log({"weights": weights}, step=example_ct)
+                    weights.append(layer.state_dict()["weight"].cpu().to(torch.float16))
+                    weights.append(layer.state_dict()["bias"].cpu().to(torch.float16))
+            torch.save(weights, f"./models/{run_id}/weights_epoch_{epoch_ct}.pt")
 
     evaluate(args.skip_mask_performance)  # evaluate once on the untrained model
 
-    batch_ct = 0
     for epoch in tqdm(range(args.epochs)):
         model.train()
         epoch_loss = 0
@@ -222,6 +230,8 @@ if __name__ == "__main__":
             wandb.log({"train_batch_loss": loss.item()}, step=example_ct)
             epoch_loss += loss.item()
         wandb.log({"train_epoch_loss": epoch_loss}, step=example_ct)
+
+        epoch_ct += 1
 
         skip_mask_performance = args.skip_mask_performance and epoch != args.epochs - 1
         evaluate(skip_mask_performance)  # evaluate after each epoch
