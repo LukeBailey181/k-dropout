@@ -44,7 +44,7 @@ def evaluate_ensemble(
             # Freeze subnet idx
             use_manual_seed(model, subnet_seed)
 
-            (output,) = model(X)
+            output = model(X)
             preds.append(output.argmax(dim=1)[None])
 
         preds = torch.mode(torch.concatenate(preds, dim=0), dim=0).values
@@ -66,7 +66,6 @@ if __name__ == "__main__":
     parser.add_argument("--n_random_subnets", type=int, default=10)
     parser.add_argument("--run_name", type=str, default=None)
     parser.add_argument("--seed", type=int, default=229)
-    parser.add_argument("--skip_mask_performance", action="store_true")
     parser.add_argument("--skip_mask_performance", action="store_true")
     parser.add_argument("--run_ensemble", action="store_true")
     parser.add_argument("--run_mode_connectivity", action="store_true")
@@ -224,11 +223,12 @@ if __name__ == "__main__":
 
     if args.run_ensemble:
         # collect data about ensembling
-
+        print("EVALUATING ENSEMBLE")
         accs = []
         for i in range(total_subnets):
-            subnet_seeds = random_subnet_seeds[: i + 1]
+            subnet_seeds = mask_subnet_seeds[: i + 1]
             acc = evaluate_ensemble(model, subnet_seeds, test_set)
+            accs.append(acc)
 
         wandb_plot(
             "sequential_dropout_ensemble",
@@ -242,4 +242,13 @@ if __name__ == "__main__":
 
     if args.run_mode_connectivity:
         # collect data bout linear mode connectivity
+
+        # Get weights for first subnet 
+
+        # Get weigths for first subnet but at the end of training 
+
+        # for i in number of interpolations
+        #   average out the weights by amount
+        #   replace weights with this
+        #   test model
         pass
