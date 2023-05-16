@@ -84,7 +84,9 @@ if __name__ == "__main__":
     wandb.log_artifact(snapshot_artifact)
 
     # create model
-    dropout_layer = SequentialKDropout  # still need to use sequential dropout for more control
+    dropout_layer = (
+        SequentialKDropout  # still need to use sequential dropout for more control
+    )
     layer_kwargs = {
         "p": args.p,
         "k": 1,
@@ -136,7 +138,7 @@ if __name__ == "__main__":
         # use subnets even if p=0
         for layer in model:
             if isinstance(layer, SequentialKDropout):
-                layer.p = .5
+                layer.p = 0.5
         for ix, seed in enumerate(random_subnet_seeds):
             use_manual_seed(model, seed)
             test_loss, acc = test_net(model, test_set, device=args.device)

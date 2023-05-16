@@ -2,6 +2,7 @@ import random
 import argparse
 from tqdm import tqdm
 import sys
+from typing import List
 
 import torch
 import torch.nn as nn
@@ -9,11 +10,13 @@ import numpy as np
 import wandb
 
 from wandb_helpers import write_git_snapshot
+from torch.utils.data import DataLoader
 
 from k_dropout.networks import make_net
 from k_dropout.training_helpers import test_net
 from k_dropout.experiment_helpers import get_dataset
 from k_dropout.modules import SequentialKDropout
+from pooled_subnet_analysis import wandb_plot
 
 
 def use_manual_seed(model: nn.Sequential, seed: int):
@@ -29,6 +32,28 @@ def remove_manual_seed(model: nn.Sequential):
             layer.use_manual_seed = False
 
 
+def evaluate_ensemble(
+    model: nn.Sequential, subnet_seeds: List[int], test_set: DataLoader
+):
+    num_correct = 0
+    total_examples = 0
+    for X, y in tqdm(test_set):
+        # Make sure batch size is 1
+        preds = []
+        for subnet_seed in subnet_seeds:
+            # Freeze subnet idx
+            use_manual_seed(model, subnet_seed)
+
+            (output,) = model(X)
+            preds.append(output.argmax(dim=1)[None])
+
+        preds = torch.mode(torch.concatenate(preds, dim=0), dim=0).values
+        num_correct += (preds == y).sum().item()
+        total_examples += y.shape[0]
+
+    return num_correct / total_examples
+
+
 if __name__ == "__main__":
     """
     Train a sequential dropout network on cifar10 and track the performance of
@@ -41,7 +66,10 @@ if __name__ == "__main__":
     parser.add_argument("--n_random_subnets", type=int, default=10)
     parser.add_argument("--run_name", type=str, default=None)
     parser.add_argument("--seed", type=int, default=229)
-    parser.add_argument("--skip_mask_performance", action='store_true')
+    parser.add_argument("--skip_mask_performance", action="store_true")
+    parser.add_argument("--skip_mask_performance", action="store_true")
+    parser.add_argument("--run_ensemble", action="store_true")
+    parser.add_argument("--run_mode_connectivity", action="store_true")
     # training
     parser.add_argument("--epochs", type=int, default=300)
     parser.add_argument("--lr", type=float, default=5e-4)
@@ -193,3 +221,25 @@ if __name__ == "__main__":
 
         skip_mask_performance = args.skip_mask_performance and epoch != args.epochs - 1
         evaluate(skip_mask_performance)  # evaluate after each epoch
+
+    if args.run_ensemble:
+        # collect data about ensembling
+
+        accs = []
+        for i in range(total_subnets):
+            subnet_seeds = random_subnet_seeds[: i + 1]
+            acc = evaluate_ensemble(model, subnet_seeds, test_set)
+
+        wandb_plot(
+            "sequential_dropout_ensemble",
+            "Ensemble of sequential dropout nets",
+            "Num Subnets",
+            "Test Accuracy",
+            [x + 1 for x in list(range(len(accs)))],
+            accs,
+            "line",
+        )
+
+    if args.run_mode_connectivity:
+        # collect data bout linear mode connectivity
+        pass

@@ -13,14 +13,15 @@ from k_dropout.training_helpers import test_net, train_net
 
 BATCH_SIZE = 512
 
+
 def evaluate_ensemble_of_subnets(
-    path_to_load_model, 
-    subnet_idx, 
-    test_set, 
-    train_set, 
-    epochs, 
-    lr, 
-    device, 
+    path_to_load_model,
+    subnet_idx,
+    test_set,
+    train_set,
+    epochs,
+    lr,
+    device,
     seed,
     path_to_save_model=None,
 ):
@@ -44,30 +45,32 @@ def evaluate_ensemble_of_subnets(
         epochs=epochs,
         lr=lr,
         device=device,
-        use_wandb=True, # TODO handle local runs
+        use_wandb=True,  # TODO handle local runs
     )
 
     if path_to_save_model is not None:
         torch.save(lens_net.net, path_to_save_model + f"_{subnet_idx}")
 
+
 @torch.no_grad()
 def evaluate_pooled_and_dropout_subnet_ensemble(
-    path_to_pool_model, 
+    path_to_pool_model,
     path_to_dropout_model,
     test_set,
     num_subnets,
 ):
-
     net = torch.load(path_to_pool_model)
     lens_net = PoolDropoutLensNet(init_net=net)
 
     drop_net = torch.load(path_to_dropout_model)
     # Hacky way to use same masks
     tmp_net = torch.load(path_to_pool_model)
-    dropout_lens_net = PoolDropoutLensNet(init_net=tmp_net) # dropout lens net has pooled_layers
+    dropout_lens_net = PoolDropoutLensNet(
+        init_net=tmp_net
+    )  # dropout lens net has pooled_layers
     dropout_lens_net.activate_random_masking()
-    dropout_lens_net.net = drop_net # replace net 
-    dropout_lens_net.deactivate_random_masking() # put the pooled layers back in
+    dropout_lens_net.net = drop_net  # replace net
+    dropout_lens_net.deactivate_random_masking()  # put the pooled layers back in
 
     num_correct = 0
     num_dropout_correct = 0
@@ -84,28 +87,25 @@ def evaluate_pooled_and_dropout_subnet_ensemble(
             output, dropout_output = lens_net(X), dropout_lens_net(X)
             preds.append(output.argmax(dim=1)[None])
             dropout_preds.append(dropout_output.argmax(dim=1)[None])
-        
-        preds = torch.mode(torch.concatenate(preds, dim=0), dim=0).values 
-        dropout_preds = torch.mode(torch.concatenate(dropout_preds, dim=0), dim=0).values 
 
-        num_correct += (preds == y).sum().item() 
+        preds = torch.mode(torch.concatenate(preds, dim=0), dim=0).values
+        dropout_preds = torch.mode(
+            torch.concatenate(dropout_preds, dim=0), dim=0
+        ).values
+
+        num_correct += (preds == y).sum().item()
         num_dropout_correct += (dropout_preds == y).sum().item()
-        total_examples += y.shape[0] 
+        total_examples += y.shape[0]
 
-    return num_correct/total_examples, num_dropout_correct/total_examples
+    return num_correct / total_examples, num_dropout_correct / total_examples
 
 
 def evaluate_independent_ensemble(
-    path_to_models_dir, 
-    model_prefix,
-    num_models,
-    test_set,
-    device
+    path_to_models_dir, model_prefix, num_models, test_set, device
 ):
-
     models = []
     for subnet_idx in range(num_models):
-        # Get string 
+        # Get string
         path = path_to_models_dir + model_prefix + f"_{subnet_idx}"
         net = torch.load(path, map_location="cpu")
         print(f"Got net {subnet_idx}")
@@ -117,14 +117,14 @@ def evaluate_independent_ensemble(
     # Evaluate ensemble
     print("Evaluating")
 
-    return(evaluate_ensemble(models, test_set))
+    return evaluate_ensemble(models, test_set)
+
 
 @torch.no_grad()
 def evaluate_ensemble(
     models,
     test_set,
 ):
-    
     num_correct = 0
     total_examples = 0
 
@@ -135,18 +135,18 @@ def evaluate_ensemble(
             # Apprend predictions to preds
             output = lens_net(X)
             preds.append(output.argmax(dim=1)[None])
-        
-        preds = torch.mode(torch.concatenate(preds, dim=0), dim=0).values 
 
-        num_correct += (preds == y).sum().item() 
-        total_examples += y.shape[0] 
+        preds = torch.mode(torch.concatenate(preds, dim=0), dim=0).values
 
-    return num_correct/total_examples
+        num_correct += (preds == y).sum().item()
+        total_examples += y.shape[0]
 
-# TODO break this out into own file so it 
+    return num_correct / total_examples
+
+
+# TODO break this out into own file so it
 # is runable using command line arguments
 def run_full_ensemble_experiment():
-
     train_set, test_set = get_dataset(
         dataset_name="cifar10",
         batch_size=512,
@@ -161,10 +161,9 @@ def run_full_ensemble_experiment():
     independent_ensemble_acc = []
     dropout_ensemble_acc = []
     for i in range(1, 51):
-
         acc, dropout_acc = evaluate_pooled_and_dropout_subnet_ensemble(
-            path_to_pool_model="./models/cifar10_ps_50.pt", 
-            path_to_dropout_model="./models/cifar10_dropout.pt", 
+            path_to_pool_model="./models/cifar10_ps_50.pt",
+            path_to_dropout_model="./models/cifar10_dropout.pt",
             test_set=test_set,
             num_subnets=i,
         )
@@ -176,7 +175,7 @@ def run_full_ensemble_experiment():
             model_prefix="cifar10_ensemble_subnet_subnet",
             num_models=i,
             test_set=test_set,
-            device="cuda"
+            device="cuda",
         )
 
         independent_ensemble_acc.append(acc)
@@ -185,8 +184,8 @@ def run_full_ensemble_experiment():
     print(independent_ensemble_acc)
     print(dropout_ensemble_acc)
 
-if __name__=="__main__":
 
+if __name__ == "__main__":
     # TODO do some arg parsing here
     parser = argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
@@ -216,7 +215,6 @@ if __name__=="__main__":
     )
     parser.add_argument("--epochs", type=int, default=100)
     parser.add_argument("--lr", type=float, default=0.005)
-
 
     # Experiment execution
     parser.add_argument(
@@ -266,13 +264,13 @@ if __name__=="__main__":
     )
 
     evaluate_ensemble_of_subnets(
-        path_to_load_model=args.path_to_load_model, 
-        subnet_idx=args.subnet_idx, 
-        test_set=test_set, 
-        train_set=train_set, 
-        epochs=args.epochs, 
-        lr=args.lr, 
-        device=args.device, 
+        path_to_load_model=args.path_to_load_model,
+        subnet_idx=args.subnet_idx,
+        test_set=test_set,
+        train_set=train_set,
+        epochs=args.epochs,
+        lr=args.lr,
+        device=args.device,
         seed=args.seed,
         path_to_save_model=args.path_to_save_model,
     )

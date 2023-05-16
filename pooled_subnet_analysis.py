@@ -138,6 +138,7 @@ def evaluate_subnets_in_dropout_net(
         plot_type="bar",
     )
 
+
 def wandb_plot(plot_id, plot_title, x_label, y_label, x_vals, y_vals, plot_type):
     """Helper function for custom wandb plots
 
