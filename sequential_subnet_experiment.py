@@ -2,6 +2,7 @@ import random
 import argparse
 from tqdm import tqdm
 import sys
+import math
 
 import torch
 import torch.nn as nn
@@ -27,6 +28,16 @@ def remove_manual_seed(model: nn.Sequential):
     for layer in model:
         if isinstance(layer, SequentialKDropout):
             layer.use_manual_seed = False
+
+
+def get_divisors(n):
+    divisors = []
+    for i in range(1, int(math.sqrt(n))):
+        if(n % i == 0):
+            divisors.append(i)
+            divisors.append(n // i)
+
+    return list(sorted(divisors))
 
 
 if __name__ == "__main__":
@@ -126,7 +137,10 @@ if __name__ == "__main__":
 
     # setup manual seeds
     n_batches = len(train_set)
-    assert args.epochs * n_batches % args.k == 0
+    total_batches = args.epochs * n_batches
+    assert total_batches % args.k == 0, (
+        f"k must divide {total_batches}: {get_divisors(total_batches)}"
+    )
     total_subnets = int(args.epochs * n_batches / args.k)
 
     mask_subnet_seeds = np.random.randint(2**32, size=total_subnets).tolist()
@@ -181,7 +195,8 @@ if __name__ == "__main__":
             X = X.to(args.device)
             y = y.to(args.device)
 
-            model.zero_grad()
+
+            optimizer.zero_grad()
             output = model(X)
             loss = criterion(output, y)
             loss.backward()
@@ -189,6 +204,7 @@ if __name__ == "__main__":
 
             wandb.log({"train_batch_loss": loss.item()}, step=example_ct)
             epoch_loss += loss.item()
+        
         wandb.log({"train_epoch_loss": epoch_loss}, step=example_ct)
 
         skip_mask_performance = args.skip_mask_performance and epoch != args.epochs - 1
