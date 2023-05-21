@@ -94,7 +94,7 @@ if __name__ == "__main__":
 
     if args.run_name is None:
         run_name = f"sequential_subnet_k={args.k}_epochs={args.epochs}"
-        if(args.disable_dropout_after_nth_subnet):
+        if(args.disable_dropout_after_nth_subnet is not None):
             run_name = f"disable_after_{args.disable_dropout_after_nth_subnet}_{run_name}"
     else:
         run_name = args.run_name
@@ -188,6 +188,7 @@ if __name__ == "__main__":
     evaluate(args.skip_mask_performance)  # evaluate once on the untrained model
 
     batch_ct = 0
+    dropout_disabled = False
     for epoch in tqdm(range(args.epochs)):
         model.train()
         epoch_loss = 0
@@ -195,10 +196,13 @@ if __name__ == "__main__":
             mask_seed_ix = batch_ct // args.k
             use_manual_seed(model, mask_subnet_seeds[mask_seed_ix])
 
-            if(mask_seed_ix + 1 > args.disable_dropout_after_nth_subnet):
+            if((not dropout_disabled) and mask_seed_ix + 1 > args.disable_dropout_after_nth_subnet):
+                print(f"Disabling dropout after {mask_seed_ix}-th subnet...")
                 for layer in model.children():
                     if(isinstance(layer, SequentialKDropout)):
                         layer.disable()
+
+                dropout_disabled = True
 
             batch_ct += 1
             example_ct += X.shape[0]
