@@ -29,6 +29,14 @@ class SequentialKDropout(nn.Module):
         self.manual_seed = 0
         self.use_manual_seed = False
 
+        self.enabled = True
+
+    def disable(self) -> None:
+        self.enabled = False
+
+    def is_enabled(self) -> None:
+        return self.enabled
+
     def forward(self, x: Tensor) -> Tensor:
         if x.dim() != 2:
             raise ValueError(f"Input must be of shape (batch_size, d), got {x.shape}")
@@ -40,7 +48,7 @@ class SequentialKDropout(nn.Module):
                 f"m value of {self.m} does not divide batch_size of value {batch_size}"
             )
 
-        if self.training or self.use_manual_seed:  # when using manual seed, always mask
+        if (self.training or self.use_manual_seed) and self.enabled:  # when using manual seed, always mask
             g = torch.Generator(device=x.device)
 
             if self.use_manual_seed:
@@ -116,6 +124,8 @@ class PoolKDropout(nn.Module):
             g = torch.Generator()
             self.mask_seeds = [g.seed() for _ in range(pool_size)]
 
+        self.enabled = True
+
     def freeze_mask(self, mask_idx: int) -> None:
         """Freeze mask to be one corresponding to mask_idx for training
         and inference
@@ -128,6 +138,12 @@ class PoolKDropout(nn.Module):
 
     def unfreeze_mask(self) -> None:
         self.frozen_mask_idx = None
+
+    def disable(self) -> None:
+        self.enabled = False
+
+    def is_enabled(self) -> None:
+        return self.enabled
 
     def forward(self, x: Tensor) -> Tensor:
         if x.dim() != 2:
@@ -154,7 +170,7 @@ class PoolKDropout(nn.Module):
                 f"m value of {self.m} does not divide batch_size of value {batch_size}"
             )
 
-        if self.training:
+        if self.training and self.enabled:
             self.num_training_passes += 1
 
             # sample mask indices

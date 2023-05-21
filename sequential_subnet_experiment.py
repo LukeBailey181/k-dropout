@@ -76,6 +76,9 @@ if __name__ == "__main__":
     parser.add_argument("--test_batch_size", type=int, default=512)
     parser.add_argument("--num_workers", type=int, default=4)
 
+    # EXPERIMENT 13
+    parser.add_argument("--disable_dropout_after_nth_subnet", type=int, default=None)
+
     args = parser.parse_args()
 
     random.seed(args.seed)
@@ -91,6 +94,8 @@ if __name__ == "__main__":
 
     if args.run_name is None:
         run_name = f"sequential_subnet_k={args.k}_epochs={args.epochs}"
+        if(args.disable_dropout_after_nth_subnet):
+            run_name = f"disable_after_{args.disable_dropout_after_nth_subnet}_{run_name}"
     else:
         run_name = args.run_name
     run = wandb.init(project="k-dropout", config=config, name=run_name)
@@ -190,11 +195,15 @@ if __name__ == "__main__":
             mask_seed_ix = batch_ct // args.k
             use_manual_seed(model, mask_subnet_seeds[mask_seed_ix])
 
+            if(mask_seed_ix + 1 > args.disable_dropout_after_nth_subnet):
+                for layer in model.children():
+                    if(isinstance(layer, SequentialKDropout)):
+                        layer.disable()
+
             batch_ct += 1
             example_ct += X.shape[0]
             X = X.to(args.device)
             y = y.to(args.device)
-
 
             optimizer.zero_grad()
             output = model(X)
@@ -209,3 +218,7 @@ if __name__ == "__main__":
 
         skip_mask_performance = args.skip_mask_performance and epoch != args.epochs - 1
         evaluate(skip_mask_performance)  # evaluate after each epoch
+
+    import pickle
+    with open("model.pickle", "wb") as fp:
+        pickle.dump(model, fp, protocol=pickle.HIGHEST_PROTOCOL)
