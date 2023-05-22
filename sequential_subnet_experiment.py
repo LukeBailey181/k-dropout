@@ -152,7 +152,7 @@ if __name__ == "__main__":
     n_batches = len(train_set)
     total_batches = args.epochs * n_batches
     total_subnets = (args.epochs * n_batches) // args.k
-    total_batches_to_run = (args.epochs * n_batches) * args.k
+    total_batches_to_run = total_subnets * args.k
 
     mask_subnet_seeds = np.random.randint(2**32, size=total_subnets).tolist()
     random_subnet_seeds = np.random.randint(
