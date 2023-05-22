@@ -75,9 +75,13 @@ if __name__ == "__main__":
     parser.add_argument("--batch_size", type=int, default=512)
     parser.add_argument("--test_batch_size", type=int, default=512)
     parser.add_argument("--num_workers", type=int, default=4)
+    parser.add_argument("--run_suffix", type=str, default=None)
 
     # EXPERIMENT 13
     parser.add_argument("--disable_dropout_after_nth_subnet", type=int, default=None)
+
+    # EXPERIMENT 14
+    parser.add_argument("--log_param_magnitude_every_n", type=int, default=None)
 
     args = parser.parse_args()
 
@@ -98,6 +102,10 @@ if __name__ == "__main__":
             run_name = f"disable_after_{args.disable_dropout_after_nth_subnet}_{run_name}"
     else:
         run_name = args.run_name
+
+    if(args.run_suffix is not None):
+        run_name = f"{run_name}_{args.run_suffix}"
+
     run = wandb.init(project="k-dropout", config=config, name=run_name)
 
     snapshot_artifact = wandb.Artifact(snapshot_name, type="git_snapshot")
@@ -160,6 +168,8 @@ if __name__ == "__main__":
     example_ct = 0
 
     def evaluate(skip_mask_performance=False):
+        is_train = model.training
+
         # evaluate...
         # for each mask subnet
         if not skip_mask_performance:
@@ -185,6 +195,10 @@ if __name__ == "__main__":
         test_loss, acc = test_net(model, test_set, device=args.device)
         wandb.log({"test_loss_full": test_loss, "test_acc_full": acc}, step=example_ct)
 
+        # test_net() flips on eval mode; undo if necessary
+        if(is_train):
+            model.train()
+
     evaluate(args.skip_mask_performance)  # evaluate once on the untrained model
 
     batch_ct = 0
@@ -192,11 +206,15 @@ if __name__ == "__main__":
     for epoch in tqdm(range(args.epochs)):
         model.train()
         epoch_loss = 0
-        for X, y in train_set:
+        for i, (X, y) in enumerate(train_set):
             mask_seed_ix = batch_ct // args.k
             use_manual_seed(model, mask_subnet_seeds[mask_seed_ix])
 
-            if((not dropout_disabled) and mask_seed_ix + 1 > args.disable_dropout_after_nth_subnet):
+            if(
+                (not dropout_disabled) and 
+                args.disable_dropout_after_nth_subnet is not None and 
+                mask_seed_ix + 1 > args.disable_dropout_after_nth_subnet
+            ):
                 print(f"Disabling dropout after {mask_seed_ix}-th subnet...")
                 for layer in model.children():
                     if(isinstance(layer, SequentialKDropout)):
@@ -217,11 +235,31 @@ if __name__ == "__main__":
 
             wandb.log({"train_batch_loss": loss.item()}, step=example_ct)
             epoch_loss += loss.item()
+
+            if(
+                args.log_param_magnitude_every_n is not None and 
+                i % args.log_param_magnitude_every_n == 0
+            ):
+                with torch.no_grad():
+                    module_means = {}
+                    total_param_count = 0
+                    for n, p in model.named_parameters():
+                        data = {}
+                        data["mean"] = torch.mean(torch.abs(p))
+                        data["param_count"] = torch.numel(p)
+                        total_param_count += data["param_count"]
+                        module_means[n] = data
+
+                    cum_mean = 0
+                    for n, d in module_means.items():
+                        cum_mean += d["mean"] * (d["param_count"] / total_param_count)
+
+                    wandb.log({"mean_param_magnitude": cum_mean}, step=example_ct)
+
         
         wandb.log({"train_epoch_loss": epoch_loss}, step=example_ct)
 
-        skip_mask_performance = args.skip_mask_performance and epoch != args.epochs - 1
-        evaluate(skip_mask_performance)  # evaluate after each epoch
+        evaluate(args.skip_mask_performance)  # evaluate after each epoch
 
     import pickle
     with open("model.pickle", "wb") as fp:

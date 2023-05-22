@@ -34,11 +34,11 @@ def test_net(net, dataset, device=DEVICE, eval_net=True):
     total_loss = total_correct = total_examples = 0
     with torch.no_grad():
         for X, y in dataset:
-            output = net(X)
+            output = nn.functional.softmax(net(X), dim=-1)
             loss = criterion(output, y)
 
             total_loss += loss.item()
-            total_correct += (output.argmax(dim=1) == y).sum().item()
+            total_correct += (output.argmax(dim=-1) == y).sum().item()
             total_examples += y.shape[0]
 
     return total_loss, total_correct / total_examples
