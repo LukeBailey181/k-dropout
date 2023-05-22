@@ -151,10 +151,8 @@ if __name__ == "__main__":
     # setup manual seeds
     n_batches = len(train_set)
     total_batches = args.epochs * n_batches
-    assert total_batches % args.k == 0, (
-        f"k must divide {total_batches}: {get_divisors(total_batches)}"
-    )
-    total_subnets = int(args.epochs * n_batches / args.k)
+    total_subnets = (args.epochs * n_batches) // args.k)
+    total_batches_to_run = (args.epochs * n_batches) * args.k
 
     mask_subnet_seeds = np.random.randint(2**32, size=total_subnets).tolist()
     random_subnet_seeds = np.random.randint(
@@ -207,6 +205,9 @@ if __name__ == "__main__":
         model.train()
         epoch_loss = 0
         for i, (X, y) in enumerate(train_set):
+            if(batch_ct > total_batches_to_run):
+                break
+
             mask_seed_ix = batch_ct // args.k
             use_manual_seed(model, mask_subnet_seeds[mask_seed_ix])
 
@@ -255,12 +256,11 @@ if __name__ == "__main__":
                         cum_mean += d["mean"] * (d["param_count"] / total_param_count)
 
                     wandb.log({"mean_param_magnitude": cum_mean}, step=example_ct)
-
-        
+ 
         wandb.log({"train_epoch_loss": epoch_loss}, step=example_ct)
 
         evaluate(args.skip_mask_performance)  # evaluate after each epoch
 
-    import pickle
-    with open("model.pickle", "wb") as fp:
-        pickle.dump(model, fp, protocol=pickle.HIGHEST_PROTOCOL)
+#    import pickle
+#    with open("model.pickle", "wb") as fp:
+#        pickle.dump(model, fp, protocol=pickle.HIGHEST_PROTOCOL)
