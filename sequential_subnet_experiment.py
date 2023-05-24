@@ -205,7 +205,7 @@ if __name__ == "__main__":
         model.train()
         epoch_loss = 0
         for i, (X, y) in enumerate(train_set):
-            if(batch_ct > total_batches_to_run):
+            if(batch_ct >= total_batches_to_run):
                 break
 
             mask_seed_ix = batch_ct // args.k
