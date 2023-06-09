@@ -148,27 +148,43 @@ if __name__ == "__main__":
     if args.store_weights:
         os.makedirs(f"./models/{run_id}")
 
-        temp_input = torch.ones((1, args.input_size), device=args.device)
-
         # for each mask subnet
         for ix, seed in enumerate(mask_subnet_seeds):
             masks = []
-            for layer in model:
+            for lix, layer in enumerate(model):
                 if isinstance(layer, SequentialKDropout):
+                    assert isinstance(model[lix + 1], nn.Linear)
+
+                    input_size = model[lix + 1].in_features
+                    temp_input = torch.ones((1, input_size), device=args.device)
+
                     layer.use_manual_seed = True
                     layer.manual_seed = seed
-                    mask = layer.get_mask(temp_input, increment_uses=False).cpu().to(torch.uint8)
+                    mask = (
+                        layer.get_mask(temp_input, increment_uses=False)
+                        .cpu()
+                        .to(torch.uint8)
+                    )
                     masks.append(mask)
             torch.save(masks, f"./models/{run_id}/dropout_mask_{ix}.pt")
 
         # for each random subnet
         for ix, seed in enumerate(random_subnet_seeds):
             masks = []
-            for layer in model:
+            for lix, layer in enumerate(model):
                 if isinstance(layer, SequentialKDropout):
+                    assert isinstance(model[lix + 1], nn.Linear)
+
+                    input_size = model[lix + 1].in_features
+                    temp_input = torch.ones((1, input_size), device=args.device)
+
                     layer.use_manual_seed = True
                     layer.manual_seed = seed
-                    mask = layer.get_mask(temp_input, increment_uses=False).cpu().to(torch.uint8)
+                    mask = (
+                        layer.get_mask(temp_input, increment_uses=False)
+                        .cpu()
+                        .to(torch.uint8)
+                    )
                     masks.append(mask)
             torch.save(masks, f"./models/{run_id}/random_mask_{ix}.pt")
 
